@@ -24,7 +24,6 @@ struct Graph {
     bnodes: Vec<BNode>,
 }
 
-
 fn main() {
     let args = Cli::parse();
 
@@ -43,7 +42,7 @@ fn main() {
                 .expect("should be the number of vertices in A")
                 .parse()
                 .unwrap();
-            let n1 : usize = line
+            let n1: usize = line
                 .split_whitespace()
                 .nth(3)
                 .expect("should be the number of vertices in B")
@@ -75,10 +74,13 @@ fn main() {
             .parse()
             .unwrap();
 
-        graph.bnodes[b-n0-1].neighbors.push(a);
-        if graph.bnodes[b-n0-1].left > a {graph.bnodes[b-n0-1].left = a;}
-        if graph.bnodes[b-n0-1].right < a {graph.bnodes[b-n0-1].right = a;}
-
+        graph.bnodes[b - n0 - 1].neighbors.push(a);
+        if graph.bnodes[b - n0 - 1].left > a {
+            graph.bnodes[b - n0 - 1].left = a;
+        }
+        if graph.bnodes[b - n0 - 1].right < a {
+            graph.bnodes[b - n0 - 1].right = a;
+        }
     }
     println!("graph {:?}", graph);
 
@@ -86,39 +88,45 @@ fn main() {
     println!("nice interval representation {:?}", ints);
 }
 
-fn exclude_first(p: &(usize,i32,i32)) -> (i32,i32) {
-    (p.1,p.2)
+fn exclude_first(p: &(usize, i32, i32)) -> (i32, i32) {
+    (p.1, p.2)
 }
 
-fn nice_interval_repr(graph: Graph) -> Vec<(usize,usize, usize)> {
-
+fn nice_interval_repr(graph: Graph) -> Vec<(usize, usize, usize)> {
     let mut p = Vec::new();
 
     for node in &graph.bnodes {
         let degree: i32 = node.neighbors.len() as i32;
-        let pl : (usize,i32,i32) = (node.id, node.left as i32, -degree);
-        let pr : (usize,i32,i32) = (node.id, node.right as i32, 2*degree);
+        let pl: (usize, i32, i32) = (node.id, node.left as i32, -degree);
+        let pr: (usize, i32, i32) = (node.id, node.right as i32, 2 * degree);
         p.push(pl);
         p.push(pr);
     }
 
-    // lexico-graphic order while ignoring first 
-    p.sort_by(|a,b| exclude_first(a).cmp(&exclude_first(b)));
+    // lexico-graphic order while ignoring first
+    p.sort_by(|a, b| exclude_first(a).cmp(&exclude_first(b)));
 
     let mut left_end = HashMap::new();
     let mut right_end = HashMap::new();
 
-    for (idx,tup) in p.iter().enumerate() {
-        if tup.2 < 0 { left_end.insert(tup.0, idx);}
-        if tup.2 > 0 { right_end.insert(tup.0, idx);}
+    for (idx, tup) in p.iter().enumerate() {
+        if tup.2 < 0 {
+            left_end.insert(tup.0, idx);
+        }
+        if tup.2 > 0 {
+            right_end.insert(tup.0, idx);
+        }
     }
 
     let mut ret = Vec::new();
 
     for node in &graph.bnodes {
-        ret.push((node.id, left_end.remove(&node.id).unwrap(), right_end.remove(&node.id).unwrap()));
+        ret.push((
+            node.id,
+            left_end.remove(&node.id).unwrap(),
+            right_end.remove(&node.id).unwrap(),
+        ));
     }
 
     return ret;
 }
-
