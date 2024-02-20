@@ -84,15 +84,84 @@ fn main() {
     }
     println!("graph {:?}", graph);
 
-    let ints = nice_interval_repr(graph);
+    let ints = nice_interval_repr(&graph);
     println!("nice interval representation {:?}", ints);
+
+    // TODO: implement Kobayashi-Tamaki algo
+    let crossing_dict = crossing_values(&graph);
+
+    println!("crossing values {:?}", crossing_dict);
+
+    let mut k: u32 = 0;
+    let mut outname = args.graph.clone();
+    outname.set_extension("sol");
+
+    loop {
+        let res = kobayashi_tamaki(&ints, &crossing_dict, k);
+
+        println!("current k value: {k}");
+
+        match res {
+            Ok(vec) => {
+                let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
+
+                let _ = std::fs::write(outname, v.join("\n"));
+                break;
+            }
+            Err(_) => {
+                k += 1;
+                continue;
+            }
+        }
+    }
+}
+
+fn kobayashi_tamaki(
+    ints: &Vec<(usize, usize, usize)>,
+    crossing_dict: &HashMap<(usize, usize), u32>,
+    k: u32,
+) -> Result<Vec<usize>, String> {
+    // This is a dummy implem, whose only purpose is to match final behavior
+    if k < 2 {
+        return Err("k not high enough".to_string());
+    }
+
+    let mut v = Vec::new();
+    for p in ints {
+        v.push(p.0);
+    }
+    Ok(v)
+}
+
+fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), u32> {
+    // This implementation is simple but NOT OPTIMAL.
+
+    let mut crossing_dict = HashMap::new();
+
+    for node1 in &graph.bnodes {
+        for node2 in &graph.bnodes {
+            let mut c: u32 = 0;
+            if node1.id != node2.id {
+                for x1 in &node1.neighbors {
+                    for x2 in &node2.neighbors {
+                        if node1.id < node2.id && x1 > x2 || node1.id > node2.id && x2 < x1 {
+                            c += 1;
+                        }
+                    }
+                }
+                crossing_dict.insert((node1.id, node2.id), c);
+            }
+        }
+    }
+
+    return crossing_dict;
 }
 
 fn exclude_first(p: &(usize, i32, i32)) -> (i32, i32) {
     (p.1, p.2)
 }
 
-fn nice_interval_repr(graph: Graph) -> Vec<(usize, usize, usize)> {
+fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
     let mut p = Vec::new();
 
     for node in &graph.bnodes {
@@ -123,8 +192,8 @@ fn nice_interval_repr(graph: Graph) -> Vec<(usize, usize, usize)> {
     for node in &graph.bnodes {
         ret.push((
             node.id,
-            left_end.remove(&node.id).unwrap(),
-            right_end.remove(&node.id).unwrap(),
+            *left_end.get(&node.id).unwrap(),
+            *right_end.get(&node.id).unwrap(),
         ));
     }
 
