@@ -17,3 +17,11 @@ Upon cloning the repository, and with Rust installed, running the code on an exa
 ```
 cargo run -- tiny_test_set/cycle_8_shuffled.gr
 ```
+
+You can generate the documentation using 
+
+```
+cargo doc
+```
+
+The documentation is then in target/doc/sherby-pace-2024
