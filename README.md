@@ -1,6 +1,7 @@
 Rust implementation of https://link.springer.com/article/10.1007/s00453-014-9872-x as a starting point for PACE 2024
 
 Resources for learning Rust:  https://www.rust-lang.org/
+
 PACE 2024: https://pacechallenge.org/2024/
 
 Choice of Rust: a short way to describe Rust is that it is similar to C and C++, but with an aggressive, well-designed compiler that forbids you from doing anything dangerous. It is designed to be a replacement of C++.
