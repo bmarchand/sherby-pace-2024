@@ -103,12 +103,13 @@ fn main() {
 
         match res {
             Ok(vec) => {
+                // Writing result in output file (name same as input, extension changed)
                 let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
-
                 let _ = std::fs::write(outname, v.join("\n"));
                 break;
             }
             Err(_) => {
+                // if not possible with continue to next loop to try k+1
                 k += 1;
                 continue;
             }
@@ -116,23 +117,168 @@ fn main() {
     }
 }
 
+/// Computing the number of binary numbers having Hamming
+/// weight w and L bits in their decomposition (with potential
+/// 0s on the left side)
+//fn num_fixed_hamming_weigth(L: usize, w: usize) -> u64 {
+//    
+//}
+//
+//fn subset_rank(subset: Vec<bool>) -> u64 {
+//
+//
+//}
+fn int2vec(x: usize, V: &Vec<usize>) -> Vec<usize> {
+    let mut S = Vec::new();
+    for (i,y) in V.iter().enumerate() {
+        // if i-th bit of x is 1, y in S
+        if (x >> i) & 1 != 0 {
+            S.push(*y);
+        }
+    }
+    return S;
+}
+
+fn vec2int(S: &Vec<usize>, V: &Vec<usize>) -> usize {
+    let mut M: HashMap<usize, usize> = HashMap::new();
+    for (i,y) in V.iter().enumerate() {
+        M.insert(*y,i);
+    }
+    let mut x: usize = 0;
+    for y in S {
+        x += usize::pow(2, M.remove(&y).unwrap().try_into().unwrap());
+    }
+    return x;
+}
+
+fn set_crossing(S: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize), u32>) -> u32 {
+    let mut c: u32 = 0;
+    for u in S {
+        c += crossing_dict[&(*u,x)];
+    }
+    return c;
+}
+
+/// The main algorithm. Let us recall the format of the input:
+///     - ints: contains the nice interval representation, i.e.
+///     elements of the form (y, a_y, b_y).
+///     - crossing_dicts: given a tuple (u,v), tells you the number
+///     of crossings between edges adjacent to u and edges adjacent to v
+///     when placing u before v.
+///     - k: the upper allowed limit to the number of crossings
+///
+/// The result is an Ok value if there is indeed an ordering allowing
+/// less than k crossings, and Err otherwise.
 fn kobayashi_tamaki(
     ints: &Vec<(usize, usize, usize)>,
     crossing_dict: &HashMap<(usize, usize), u32>,
-    k: u32,
-) -> Result<Vec<usize>, String> {
-    // This is a dummy implem, whose only purpose is to match final behavior
-    if k < 2 {
+    k: u32) -> Result<Vec<usize>, String> {
+
+    // 2|Y| in the article. we start at 0 here.
+    let T: usize = 2*ints.len() - 1;
+
+    // computing the sets L_t and M_t, recording when t=a_y or t=b_y
+    let mut M: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Mt elements
+    let mut L: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Lt elements
+    for t in 0..T {
+        L.entry(t).or_default();
+    }
+    let mut A: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
+    let mut B: HashMap<usize, usize> = HashMap::new(); // t to y such that t=b_y
+    for tup in ints {
+        A.insert(tup.1, tup.0);
+        B.insert(tup.2, tup.0);
+        for t in (tup.1)..(tup.2) {
+            // or_default puts an empty vector if t entry does not exist.
+            M.entry(t).or_default().push(tup.0);            
+        }
+        for t in (tup.2)..T {
+            L.entry(t).or_default().push(tup.0)
+        }
+    }
+
+
+    // Looking at size of largest M_t
+    let mut mt_sizes = Vec::new();
+    let mut h: u32 = 0;
+    for t in 0..T {
+        let v = M.get(&t).unwrap();
+        mt_sizes.push(v.len() as u32);
+        h = std::cmp::max(h,v.len() as u32);
+    }
+
+    // This is where k comes into account
+    if h*(h-1) > k { 
         return Err("k not high enough".to_string());
+    }
+
+    println!("M sets {:?}", M);
+    println!("L sets {:?}", L);
+
+    // dynamic programming table initialization
+    let mut solutions = vec![Vec::new(); M.len()];
+    for (t,v) in solutions.iter_mut().enumerate() {
+        let new_size = usize::pow(2, mt_sizes[t]); // size depends on t
+        v.resize(new_size, 0); // init at zero (!)
+    }
+    
+    println!("solutions {:?}", solutions);
+
+    // filling table
+    for t in 1..(M.len()) {
+        // TODO: iteration below is naive, and inefficient in terms of contiguity.
+        for x in 0..solutions[t].len() {
+            let mut S = int2vec(x, &M[&t]);       
+
+            // if t is b_y for some y
+            if let Some(y) = B.get(&t) {
+                match S.binary_search(&y) {
+                    Ok(pos) => {}
+                    Err(pos) => S.insert(pos, *y),
+                }
+                solutions[t][x] = solutions[t-1][vec2int(&S, &M[&(t-1)])]
+            }
+
+            // if t is a_y for some y
+            if let Some(y) = A.get(&t) {
+                if !S.contains(&y) {
+                    solutions[t][x] = solutions[t-1][vec2int(&int2vec(x, &M[&t]), &M[&(t-1)])];
+                }
+                else {
+                    let mut m = u32::MAX;
+                    let mut best_x = usize::MAX;
+                    for x in &S {
+                        let mut S2 = S.clone();
+                        S2.remove(S2.binary_search(&x).unwrap());
+                        
+                        let mut sc: u32 = solutions[t][vec2int(&S2, &M[&t])];
+                        sc += set_crossing(&L[&t], *x, &crossing_dict);
+                        sc += set_crossing(&S2, *x, &crossing_dict);
+            
+                        if sc < m {
+                            m = sc;
+                            best_x = *x;
+                        }
+                    }
+                    solutions[t][x] = m;
+                }
+            }
+        }
     }
 
     let mut v = Vec::new();
     for p in ints {
         v.push(p.0);
     }
-    Ok(v)
+    Ok(v)    // It is a return (see "expressions" in rust)
 }
 
+/// Computation of all crossing values c(u,v) for u,v two 
+/// vertices of Y, the side of the graph that must be ordered.
+/// The result is an Hashmap associating keys (u,v) to
+/// the integer value c(u,v), the number of crossings
+/// obtained between edges adjacent to u and edges
+/// adjacent to v if u is placed before v in the order.
 fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), u32> {
     // This implementation is simple but NOT OPTIMAL.
 
@@ -157,10 +303,20 @@ fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), u32> {
     return crossing_dict;
 }
 
+/// a simple function that excludes the first component
+/// of a tuple, so that it may be ignored in a lexico-graphic
+/// ordering
 fn exclude_first(p: &(usize, i32, i32)) -> (i32, i32) {
     (p.1, p.2)
 }
 
+/// Computes a nice interval representation, in the sense of the
+/// \mathcal{J} set of intervals in the article of Kobayashi and
+/// Tamaki.
+///
+/// The entries of the output vector are of the form (y, a_y, b_y).
+/// I.e. the identifier of the node, the left end of the interval
+/// and the right-end of the interval
 fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
     let mut p = Vec::new();
 
