@@ -244,7 +244,6 @@ fn kobayashi_tamaki(
                     opt[t][x] = opt[t - 1][vec2int(&int2vec(x, &M[&t]), &M[&(t - 1)])];
                 } else {
                     let mut m = u32::MAX;
-                    let mut best_x = usize::MAX;
                     for x in &s {
                         let mut s2 = s.clone();
                         s2.remove(s2.binary_search(&x).unwrap());
@@ -255,7 +254,6 @@ fn kobayashi_tamaki(
 
                         if sc < m {
                             m = sc;
-                            best_x = *x;
                         }
                     }
                     opt[t][x] = m;
@@ -274,7 +272,7 @@ fn kobayashi_tamaki(
         if let Some(y) = B.get(&t) {
             t -= 1;
             match s.binary_search(&y) {
-                Ok(pos) => {}
+                Ok(_pos) => {}
                 Err(pos) => s.insert(pos, *y),
             }
         }
