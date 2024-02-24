@@ -103,6 +103,7 @@ fn main() {
 
         match res {
             Ok(vec) => {
+                println!("solution {:?}", vec);
                 // Writing result in output file (name same as input, extension changed)
                 let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
                 let _ = std::fs::write(outname, v.join("\n"));
@@ -175,13 +176,14 @@ fn kobayashi_tamaki(
     k: u32,
 ) -> Result<Vec<usize>, String> {
     // 2|Y| in the article. we start at 0 here.
-    let max_t: usize = 2 * ints.len() - 1;
+    let max_t: usize = 2 * ints.len();
 
     // computing the sets L_t and M_t, recording when t=a_y or t=b_y
     let mut m: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Mt elements
     let mut l: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Lt elements
     for t in 0..max_t {
         l.entry(t).or_default();
+        m.entry(t).or_default();
     }
     let mut a: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
     let mut b: HashMap<usize, usize> = HashMap::new(); // t to y such that t=b_y
@@ -197,6 +199,7 @@ fn kobayashi_tamaki(
         }
     }
 
+    println!("M: {:?}",m);
     // Looking at size of largest M_t
     let mut mt_sizes = Vec::new();
     let mut h: u32 = 0;
@@ -221,7 +224,6 @@ fn kobayashi_tamaki(
         v.resize(new_size, 0); // init at zero (!)
     }
 
-    println!("opt {:?}", opt);
 
     // filling table
     for t in 1..(m.len()) {
@@ -261,13 +263,21 @@ fn kobayashi_tamaki(
             }
         }
     }
+    println!("table {:?}", opt);
+    println!("OPT {:?}", opt[max_t-1][0]);
+    if opt[max_t-1][0] > k {
+        return Err("k not high enough".to_string());
+    }
 
     // reconstructing solution
     let mut solution = Vec::new();
     let mut s: Vec<usize> = Vec::new();
-    let mut t: usize = max_t;
+    let mut t: usize = max_t-1;
 
-    while t > 0 {
+    loop {
+        if t==0 && s.len()==0 {
+            break;
+        }
         // if t is b_y for some y
         if let Some(y) = b.get(&t) {
             t -= 1;
@@ -360,8 +370,8 @@ fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
 
     for node in &graph.bnodes {
         let degree: i32 = node.neighbors.len() as i32;
-        let pl: (usize, i32, i32) = (node.id, node.left as i32, -degree);
-        let pr: (usize, i32, i32) = (node.id, node.right as i32, 2 * degree);
+        let pl: (usize, i32, i32) = (node.id, node.left as i32, 2*degree);
+        let pr: (usize, i32, i32) = (node.id, node.right as i32, - degree);
         p.push(pl);
         p.push(pr);
     }
@@ -369,14 +379,16 @@ fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
     // lexico-graphic order while ignoring first
     p.sort_by(|a, b| exclude_first(a).cmp(&exclude_first(b)));
 
+    println!("sorted p: {:?}", p);
+
     let mut left_end = HashMap::new();
     let mut right_end = HashMap::new();
 
     for (idx, tup) in p.iter().enumerate() {
-        if tup.2 < 0 {
+        if tup.2 > 0 {
             left_end.insert(tup.0, idx);
         }
-        if tup.2 > 0 {
+        if tup.2 < 0 {
             right_end.insert(tup.0, idx);
         }
     }
