@@ -128,32 +128,32 @@ fn main() {
 //
 //
 //}
-fn int2vec(x: usize, V: &Vec<usize>) -> Vec<usize> {
-    let mut S = Vec::new();
-    for (i, y) in V.iter().enumerate() {
-        // if i-th bit of x is 1, y in S
+fn int2vec(x: usize, v: &Vec<usize>) -> Vec<usize> {
+    let mut s = Vec::new();
+    for (i, y) in v.iter().enumerate() {
+        // if i-th bit of x is 1, y in s
         if (x >> i) & 1 != 0 {
-            S.push(*y);
+            s.push(*y);
         }
     }
-    return S;
+    return s;
 }
 
-fn vec2int(S: &Vec<usize>, V: &Vec<usize>) -> usize {
-    let mut M: HashMap<usize, usize> = HashMap::new();
-    for (i, y) in V.iter().enumerate() {
-        M.insert(*y, i);
+fn vec2int(s: &Vec<usize>, v: &Vec<usize>) -> usize {
+    let mut m: HashMap<usize, usize> = HashMap::new();
+    for (i, y) in v.iter().enumerate() {
+        m.insert(*y, i);
     }
     let mut x: usize = 0;
-    for y in S {
-        x += usize::pow(2, M.remove(&y).unwrap().try_into().unwrap());
+    for y in s {
+        x += usize::pow(2, m.remove(&y).unwrap().try_into().unwrap());
     }
     return x;
 }
 
-fn set_crossing(S: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize), u32>) -> u32 {
+fn set_crossing(s: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize), u32>) -> u32 {
     let mut c: u32 = 0;
-    for u in S {
+    for u in s {
         c += crossing_dict[&(*u, x)];
     }
     return c;
@@ -175,33 +175,33 @@ fn kobayashi_tamaki(
     k: u32,
 ) -> Result<Vec<usize>, String> {
     // 2|Y| in the article. we start at 0 here.
-    let T: usize = 2 * ints.len() - 1;
+    let max_t: usize = 2 * ints.len() - 1;
 
     // computing the sets L_t and M_t, recording when t=a_y or t=b_y
-    let mut M: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Mt elements
-    let mut L: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Lt elements
-    for t in 0..T {
-        L.entry(t).or_default();
+    let mut m: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Mt elements
+    let mut l: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Lt elements
+    for t in 0..max_t {
+        l.entry(t).or_default();
     }
-    let mut A: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
-    let mut B: HashMap<usize, usize> = HashMap::new(); // t to y such that t=b_y
+    let mut a: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
+    let mut b: HashMap<usize, usize> = HashMap::new(); // t to y such that t=b_y
     for tup in ints {
-        A.insert(tup.1, tup.0);
-        B.insert(tup.2, tup.0);
+        a.insert(tup.1, tup.0);
+        b.insert(tup.2, tup.0);
         for t in (tup.1)..(tup.2) {
             // or_default puts an empty vector if t entry does not exist.
-            M.entry(t).or_default().push(tup.0);
+            m.entry(t).or_default().push(tup.0);
         }
-        for t in (tup.2)..T {
-            L.entry(t).or_default().push(tup.0)
+        for t in (tup.2)..max_t {
+            l.entry(t).or_default().push(tup.0)
         }
     }
 
     // Looking at size of largest M_t
     let mut mt_sizes = Vec::new();
     let mut h: u32 = 0;
-    for t in 0..T {
-        let v = M.get(&t).unwrap();
+    for t in 0..max_t {
+        let v = m.get(&t).unwrap();
         mt_sizes.push(v.len() as u32);
         h = std::cmp::max(h, v.len() as u32);
     }
@@ -211,11 +211,11 @@ fn kobayashi_tamaki(
         return Err("k not high enough".to_string());
     }
 
-    println!("M sets {:?}", M);
-    println!("L sets {:?}", L);
+    println!("M sets {:?}", m);
+    println!("L sets {:?}", l);
 
     // dynamic programming table initialization
-    let mut opt = vec![Vec::new(); M.len()];
+    let mut opt = vec![Vec::new(); m.len()];
     for (t, v) in opt.iter_mut().enumerate() {
         let new_size = usize::pow(2, mt_sizes[t]); // size depends on t
         v.resize(new_size, 0); // init at zero (!)
@@ -224,39 +224,39 @@ fn kobayashi_tamaki(
     println!("opt {:?}", opt);
 
     // filling table
-    for t in 1..(M.len()) {
+    for t in 1..(m.len()) {
         // TODO: iteration below is naive, and inefficient in terms of contiguity.
         for x in 0..opt[t].len() {
-            let mut s = int2vec(x, &M[&t]);
+            let mut s = int2vec(x, &m[&t]);
 
             // if t is b_y for some y
-            if let Some(y) = B.get(&t) {
+            if let Some(y) = b.get(&t) {
                 match s.binary_search(&y) {
                     Ok(_) => {}
                     Err(pos) => s.insert(pos, *y),
                 }
-                opt[t][x] = opt[t - 1][vec2int(&s, &M[&(t - 1)])]
+                opt[t][x] = opt[t - 1][vec2int(&s, &m[&(t - 1)])]
             }
 
             // if t is a_y for some y
-            if let Some(y) = A.get(&t) {
+            if let Some(y) = a.get(&t) {
                 if !s.contains(&y) {
-                    opt[t][x] = opt[t - 1][vec2int(&int2vec(x, &M[&t]), &M[&(t - 1)])];
+                    opt[t][x] = opt[t - 1][vec2int(&int2vec(x, &m[&t]), &m[&(t - 1)])];
                 } else {
-                    let mut m = u32::MAX;
+                    let mut best_sc = u32::MAX;
                     for x in &s {
                         let mut s2 = s.clone();
                         s2.remove(s2.binary_search(&x).unwrap());
 
-                        let mut sc: u32 = opt[t][vec2int(&s2, &M[&t])];
-                        sc += set_crossing(&L[&t], *x, &crossing_dict);
+                        let mut sc: u32 = opt[t][vec2int(&s2, &m[&t])];
+                        sc += set_crossing(&l[&t], *x, &crossing_dict);
                         sc += set_crossing(&s2, *x, &crossing_dict);
 
-                        if sc < m {
-                            m = sc;
+                        if sc < best_sc {
+                            best_sc = sc;
                         }
                     }
-                    opt[t][x] = m;
+                    opt[t][x] = best_sc;
                 }
             }
         }
@@ -265,11 +265,11 @@ fn kobayashi_tamaki(
     // reconstructing solution
     let mut solution = Vec::new();
     let mut s: Vec<usize> = Vec::new();
-    let mut t: usize = T;
+    let mut t: usize = max_t;
 
     while t > 0 {
         // if t is b_y for some y
-        if let Some(y) = B.get(&t) {
+        if let Some(y) = b.get(&t) {
             t -= 1;
             match s.binary_search(&y) {
                 Ok(_pos) => {}
@@ -278,22 +278,22 @@ fn kobayashi_tamaki(
         }
 
         // if t is a_y for some y
-        if let Some(y) = A.get(&t) {
+        if let Some(y) = a.get(&t) {
             if !s.contains(&y) {
                 t -= 1;
             } else {
-                let mut m = u32::MAX;
+                let mut best_sc = u32::MAX;
                 let mut best_x = usize::MAX;
                 for x in &s {
                     let mut s2 = s.clone();
                     s2.remove(s2.binary_search(&x).unwrap());
 
-                    let mut sc: u32 = opt[t][vec2int(&s2, &M[&t])];
-                    sc += set_crossing(&L[&t], *x, &crossing_dict);
+                    let mut sc: u32 = opt[t][vec2int(&s2, &m[&t])];
+                    sc += set_crossing(&l[&t], *x, &crossing_dict);
                     sc += set_crossing(&s2, *x, &crossing_dict);
 
-                    if sc < m {
-                        m = sc;
+                    if sc < best_sc {
+                        best_sc = sc;
                         best_x = *x;
                     }
                 }
