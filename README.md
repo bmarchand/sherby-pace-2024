@@ -21,7 +21,7 @@ cargo run -- tiny_test_set/cycle_8_shuffled.gr
 You can generate the documentation using 
 
 ```
-cargo doc
+cargo doc --open
 ```
 
 The documentation is then in target/doc/sherby-pace-2024
