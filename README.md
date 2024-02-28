@@ -15,7 +15,12 @@ The repository follows the standard Rust structure, as created automatically by 
 Upon cloning the repository, and with Rust installed, running the code on an example should look like:
 
 ```
-cargo run -- tiny_test_set/cycle_8_shuffled.gr
+cargo run -- tests/tiny_test_set/cycle_8_shuffled.gr
+```
+
+The tests (running on tiny_test_set and cheking that the results are correct) can be run with:
+```
+cargo test
 ```
 
 You can generate the documentation using 
@@ -24,4 +29,4 @@ You can generate the documentation using
 cargo doc --open
 ```
 
-The documentation is then in target/doc/sherby-pace-2024
+The documentation is then in target/doc/sherby-pace-2024.
