@@ -347,8 +347,8 @@ fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
 
     for node in &graph.bnodes {
         let degree: i32 = node.neighbors.len() as i32;
-        let pl: (usize, i32, i32) = (node.id, node.left as i32, 2*degree);
-        let pr: (usize, i32, i32) = (node.id, node.right as i32, - degree);
+        let pl: (usize, i32, i32) = (node.id, node.left as i32, 10*(degree-1));
+        let pr: (usize, i32, i32) = (node.id, node.right as i32,  -10*(degree-1)+1);
         p.push(pl);
         p.push(pr);
     }
@@ -362,10 +362,10 @@ fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
     let mut right_end = HashMap::new();
 
     for (idx, tup) in p.iter().enumerate() {
-        if tup.2 > 0 {
+        if tup.2 >= 10 || tup.2==0 {
             left_end.insert(tup.0, idx);
         }
-        if tup.2 < 0 {
+        if tup.2 < 0 || tup.2==1 {
             right_end.insert(tup.0, idx);
         }
     }
@@ -375,8 +375,8 @@ fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
     for node in &graph.bnodes {
         ret.push((
             node.id,
-            *left_end.get(&node.id).unwrap(),
-            *right_end.get(&node.id).unwrap(),
+            *left_end.get(&node.id).expect("node is not present in left end list"),
+            *right_end.get(&node.id).expect("node is not present in right end list"),
         ));
     }
 
