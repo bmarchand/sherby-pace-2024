@@ -92,30 +92,16 @@ fn main() {
 
     println!("crossing values {:?}", crossing_dict);
 
-    let mut k: u32 = 0;
     let mut outname = args.graph.clone();
     outname.set_extension("sol");
 
-    loop {
-        let res = kobayashi_tamaki(&ints, &crossing_dict, k);
+    // main call
+    let vec = kobayashi_tamaki(&ints, &crossing_dict).unwrap();
 
-        println!("current k value: {k}");
-
-        match res {
-            Ok(vec) => {
-                println!("solution {:?}", vec);
-                // Writing result in output file (name same as input, extension changed)
-                let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
-                let _ = std::fs::write(outname, v.join("\n"));
-                break;
-            }
-            Err(_) => {
-                // if not possible with continue to next loop to try k+1
-                k += 1;
-                continue;
-            }
-        }
-    }
+    println!("solution {:?}", vec);
+    // Writing result in output file (name same as input, extension changed)
+    let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
+    let _ = std::fs::write(outname, v.join("\n"));
 }
 
 /// Computing the number of binary numbers having Hamming
@@ -173,7 +159,6 @@ fn set_crossing(s: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize)
 fn kobayashi_tamaki(
     ints: &Vec<(usize, usize, usize)>,
     crossing_dict: &HashMap<(usize, usize), u32>,
-    k: u32,
 ) -> Result<Vec<usize>, String> {
     // 2|Y| in the article. we start at 0 here.
     let max_t: usize = 2 * ints.len();
@@ -207,11 +192,6 @@ fn kobayashi_tamaki(
         let v = m.get(&t).unwrap();
         mt_sizes.push(v.len() as u32);
         h = std::cmp::max(h, v.len() as u32);
-    }
-
-    // This is where k comes into account
-    if h * (h - 1) > k {
-        return Err("k not high enough".to_string());
     }
 
     println!("M sets {:?}", m);
@@ -265,9 +245,6 @@ fn kobayashi_tamaki(
     }
     println!("table {:?}", opt);
     println!("OPT {:?}", opt[max_t-1][0]);
-    if opt[max_t-1][0] > k {
-        return Err("k not high enough".to_string());
-    }
 
     // reconstructing solution
     let mut solution = Vec::new();
