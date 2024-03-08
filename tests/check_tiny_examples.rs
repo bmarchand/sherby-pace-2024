@@ -5,8 +5,8 @@ use std::process::Command;
 
 #[test]
 fn test_complete_4_5() {
-    let mut cmd = Command::cargo_bin("sherby-pace-2024").unwrap();
 
+    let mut cmd = Command::cargo_bin("sherby-pace-2024").unwrap();
     cmd.arg("tiny_test_set/complete_4_5.gr");
     cmd.assert().success();
 
@@ -32,8 +32,9 @@ fn test_complete_4_5() {
 }
 
 fn test_file(instance: &str, sol1_name: &str, sol2_name: &str) {
-    let mut cmd = Command::cargo_bin("sherby-pace-2024").unwrap();
 
+    // running our solver. writes solution (order) into sol1.
+    let mut cmd = Command::cargo_bin("sherby-pace-2024").unwrap();
     cmd.arg(instance);
     cmd.assert().success();
 

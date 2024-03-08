@@ -6,10 +6,8 @@ fn main() {
     let args = Cli::parse();
 
     let graph: Graph = parse_graph(&args.graph);
-    println!("graph {:?}", graph);
 
     let ints = nice_interval_repr(&graph);
-    println!("nice interval representation {:?}", ints);
 
     // TODO: implement more efficient crossing values procedure
     let crossing_dict = crossing_values(&graph);
@@ -62,10 +60,10 @@ fn vec2int(s: &Vec<usize>, v: &Vec<usize>) -> usize {
     return x;
 }
 
-fn set_crossing(s: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize), u32>) -> u32 {
-    let mut c: u32 = 0;
+fn set_crossing(s: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize), usize>) -> usize {
+    let mut c: usize = 0;
     for u in s {
-        c += crossing_dict[&(*u, x)];
+        c += crossing_dict.get(&(*u, x)).unwrap_or(&(0 as usize));
     }
     return c;
 }
@@ -82,7 +80,7 @@ fn set_crossing(s: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize)
 /// less than k crossings, and Err otherwise.
 fn kobayashi_tamaki(
     ints: &Vec<(usize, usize, usize)>,
-    crossing_dict: &HashMap<(usize, usize), u32>,
+    crossing_dict: &HashMap<(usize, usize), usize>,
 ) -> Result<Vec<usize>, String> {
     // 2|Y| in the article. we start at 0 here.
     let max_t: usize = 2 * ints.len();
@@ -148,12 +146,12 @@ fn kobayashi_tamaki(
                 if !s.contains(&y) {
                     opt[t][x] = opt[t - 1][vec2int(&int2vec(x, &m[&t]), &m[&(t - 1)])];
                 } else {
-                    let mut best_sc = u32::MAX;
+                    let mut best_sc = usize::MAX;
                     for x in &s {
                         let mut s2 = s.clone();
                         s2.remove(s2.binary_search(&x).unwrap());
 
-                        let mut sc: u32 = opt[t][vec2int(&s2, &m[&t])];
+                        let mut sc: usize = opt[t][vec2int(&s2, &m[&t])];
                         sc += set_crossing(&l[&t], *x, &crossing_dict);
                         sc += set_crossing(&s2, *x, &crossing_dict);
 
@@ -192,13 +190,13 @@ fn kobayashi_tamaki(
             if !s.contains(&y) {
                 t -= 1;
             } else {
-                let mut best_sc = u32::MAX;
+                let mut best_sc = usize::MAX;
                 let mut best_x = usize::MAX;
                 for x in &s {
                     let mut s2 = s.clone();
                     s2.remove(s2.binary_search(&x).unwrap());
 
-                    let mut sc: u32 = opt[t][vec2int(&s2, &m[&t])];
+                    let mut sc: usize = opt[t][vec2int(&s2, &m[&t])];
                     sc += set_crossing(&l[&t], *x, &crossing_dict);
                     sc += set_crossing(&s2, *x, &crossing_dict);
 
@@ -227,23 +225,36 @@ fn kobayashi_tamaki(
 /// the integer value c(u,v), the number of crossings
 /// obtained between edges adjacent to u and edges
 /// adjacent to v if u is placed before v in the order.
-fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), u32> {
-    // This implementation is simple but NOT OPTIMAL.
+fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize> {
+    
+    let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
 
-    let mut crossing_dict = HashMap::new();
+    // #1 compute all d^<x(u) O(|X||Y|)
+    for u in &graph.bnodes {
+        let mut d: usize = 0;
+        for x in &graph.anodes {
+            d_less_than_x.insert((u.id,x.id),d);
+            if u.neighbors.contains(&x.id) {
+                d += 1;
+            }
+        }
+    }
 
-    for node1 in &graph.bnodes {
-        for node2 in &graph.bnodes {
-            let mut c: u32 = 0;
-            if node1.id != node2.id {
-                for x1 in &node1.neighbors {
-                    for x2 in &node2.neighbors {
-                        if node1.id < node2.id && x1 > x2 || node1.id > node2.id && x2 < x1 {
-                            c += 1;
-                        }
-                    }
+    // #2 compute all crossing values
+    let mut crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
+   
+    for u in &graph.bnodes {
+        for v in &graph.bnodes {
+            if u.id==v.id {
+                continue;
+            }
+            for x in &u.neighbors {
+                if let Some(c) = crossing_dict.get(&(u.id,v.id)) {
+                    crossing_dict.insert((u.id,v.id),*c+d_less_than_x.get(&(v.id,*x)).unwrap());
                 }
-                crossing_dict.insert((node1.id, node2.id), c);
+                else {
+                    crossing_dict.insert((u.id,v.id),*d_less_than_x.get(&(v.id,*x)).unwrap()); 
+                }
             }
         }
     }
@@ -278,8 +289,6 @@ fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
 
     // lexico-graphic order while ignoring first
     p.sort_by(|a, b| exclude_first(a).cmp(&exclude_first(b)));
-
-    println!("sorted p: {:?}", p);
 
     let mut left_end = HashMap::new();
     let mut right_end = HashMap::new();
