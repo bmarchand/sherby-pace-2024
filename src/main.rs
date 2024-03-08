@@ -30,8 +30,8 @@ fn main() {
 //    let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
 //    let _ = std::fs::write(outname, v.join("\n"));
 
-    let peak_mem = PEAK_ALLOC.peak_usage_as_gb();
-    println!("The peak of allocated memory was {} gb", peak_mem);
+    let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
+    println!("peak memory: {} mb", peak_mem);
 }
 
 /// Computing the number of binary numbers having Hamming
@@ -229,6 +229,10 @@ fn kobayashi_tamaki(
 /// the integer value c(u,v), the number of crossings
 /// obtained between edges adjacent to u and edges
 /// adjacent to v if u is placed before v in the order.
+///
+/// It works by first compuring $d^{<x}(u)$, the number of neighbors
+/// of $u$ (a vertex of B) that are strictly before x, a vertex in A.
+/// Then, it uses the formula $$c(u,v) = \sum_{x\in N(u)} d^{<x}(v)$$
 fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize> {
     
     let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
@@ -266,6 +270,13 @@ fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize> {
     return crossing_dict;
 }
 
+/// Computes crossing values for orientable pairs only.
+/// A pair (u,v) is orientable if neither $r_u\leq l_v$ nor $r_v\leq l_u$.
+/// It does so by using the same formula as the function crossing_value,
+/// except that $d^{<x}(v)$ is only computed for a $x\in [l_v,r_v]$.
+/// Then, c(u,v) is only computed for orientable pairs.
+/// If a value of $d^{<x}(v)$ is requested for x smaller than $l_v$ or
+/// larger than $r_v$ then it is computed on the flies with its trivial values.
 fn orientable_crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize>  {
 
     let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
