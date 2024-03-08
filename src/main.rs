@@ -1,6 +1,11 @@
 use clap::Parser;
 use sherby_pace_2024::*;
 use std::collections::HashMap;
+use std::collections::HashSet;
+use peak_alloc::PeakAlloc;
+
+#[global_allocator]
+static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
     let args = Cli::parse();
@@ -10,20 +15,23 @@ fn main() {
     let ints = nice_interval_repr(&graph);
 
     // TODO: implement more efficient crossing values procedure
-    let crossing_dict = crossing_values(&graph);
+    let crossing_dict = orientable_crossing_values(&graph);
 
-    println!("crossing values {:?}", crossing_dict);
+//    println!("crossing values {:?}", crossing_dict);
+//
+//    let mut outname = args.graph.clone();
+//    outname.set_extension("sol");
+//
+//    // main call
+//    let vec = kobayashi_tamaki(&ints, &crossing_dict).unwrap();
+//
+//    println!("solution {:?}", vec);
+//    // Writing result in output file (name same as input, extension changed)
+//    let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
+//    let _ = std::fs::write(outname, v.join("\n"));
 
-    let mut outname = args.graph.clone();
-    outname.set_extension("sol");
-
-    // main call
-    let vec = kobayashi_tamaki(&ints, &crossing_dict).unwrap();
-
-    println!("solution {:?}", vec);
-    // Writing result in output file (name same as input, extension changed)
-    let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
-    let _ = std::fs::write(outname, v.join("\n"));
+    let peak_mem = PEAK_ALLOC.peak_usage_as_gb();
+    println!("The peak of allocated memory was {} gb", peak_mem);
 }
 
 /// Computing the number of binary numbers having Hamming
@@ -106,7 +114,6 @@ fn kobayashi_tamaki(
         }
     }
 
-    println!("M: {:?}", m);
     // Looking at size of largest M_t
     let mut mt_sizes = Vec::new();
     let mut h: u32 = 0;
@@ -115,9 +122,6 @@ fn kobayashi_tamaki(
         mt_sizes.push(v.len() as u32);
         h = std::cmp::max(h, v.len() as u32);
     }
-
-    println!("M sets {:?}", m);
-    println!("L sets {:?}", l);
 
     // dynamic programming table initialization
     let mut opt = vec![Vec::new(); m.len()];
@@ -260,6 +264,83 @@ fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize> {
     }
 
     return crossing_dict;
+}
+
+fn orientable_crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize>  {
+
+    let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
+
+    // #1 compute d^<x(u) values that matter
+    for u in &graph.bnodes {
+        let mut d: usize = 0;
+        for x in (u.left)..=(u.right) {
+            d_less_than_x.insert((u.id,x),d);
+            if u.neighbors.contains(&x) {
+                d += 1;
+            }
+        }
+    }
+
+    // #1.5 prep work for orientable pairs
+    let mut left_end: HashMap<usize,usize> = HashMap::new();
+    let mut right_end: HashMap<usize,usize> = HashMap::new();
+    let mut neighbors: HashMap<usize, Vec<usize>> = HashMap::new();
+    for u in &graph.bnodes {
+        left_end.insert(u.id, u.left);
+        right_end.insert(u.id, u.right);
+        neighbors.insert(u.id, u.neighbors.clone());
+    }
+
+    let mut orientable_pairs: HashSet<(usize,usize)> = HashSet::new();
+    let mut active_vertices: HashSet<usize> = HashSet::new();
+    // #2 computing orientable pairs
+    for x in &graph.anodes {
+        for u in &x.neighbors {
+            if x.id==*left_end.get(u).unwrap() {
+                active_vertices.insert(*u);
+            }
+            if x.id==*right_end.get(u).unwrap() {
+                active_vertices.remove(u);
+            }
+            for w in &active_vertices {
+                orientable_pairs.insert((*u, *w));
+                orientable_pairs.insert((*w, *u));
+            }
+        }
+    }
+
+    // #3 compute crossing values for orientable pairs
+    let mut crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
+   
+    for (u,v) in orientable_pairs {
+        if u==v {
+            continue;
+        }
+        for x in neighbors.get(&u).unwrap() {
+
+            // reconstructing d<x(v)
+            let mut d = 0;
+            if x > right_end.get(&v).unwrap() {
+                d = neighbors.get(&v).unwrap().len(); 
+            }
+            else {
+                if x > left_end.get(&v).unwrap() {
+                    d = *d_less_than_x.get(&(v,*x)).unwrap();
+                }
+            }
+
+            // adding to crossing value
+            if let Some(c) = crossing_dict.get(&(u,v)) {
+                crossing_dict.insert((u,v),*c+d);
+            }
+            else {
+                crossing_dict.insert((u,v),d); 
+            }
+        }
+    }
+
+    return crossing_dict;
+    
 }
 
 /// a simple function that excludes the first component
