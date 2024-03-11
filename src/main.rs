@@ -11,28 +11,102 @@ fn main() {
     let args = Cli::parse();
 
     let graph: Graph = parse_graph(&args.graph);
+    
+    let mut crossing_dict = orientable_crossing_values(&graph);
+
+    let twin_mapping = find_twins(&graph);
+    println!("{:?} twins out of {:?} vertices", twin_mapping.len(), graph.bnodes.len());
+
+    let graph = process_twins_graph(graph, &twin_mapping);
+    println!("num vertices after {:?}", graph.bnodes.len());
+
+    crossing_dict = process_twins_crossing_dict(&twin_mapping, &crossing_dict);
 
     let ints = nice_interval_repr(&graph);
 
-    // TODO: implement more efficient crossing values procedure
-    let crossing_dict = orientable_crossing_values(&graph);
+    let mut outname = args.graph.clone();
+    outname.set_extension("sol");
 
-//    println!("crossing values {:?}", crossing_dict);
-//
-//    let mut outname = args.graph.clone();
-//    outname.set_extension("sol");
-//
-//    // main call
-//    let vec = kobayashi_tamaki(&ints, &crossing_dict).unwrap();
-//
-//    println!("solution {:?}", vec);
-//    // Writing result in output file (name same as input, extension changed)
-//    let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
-//    let _ = std::fs::write(outname, v.join("\n"));
+    // main call
+    let vec = kobayashi_tamaki(&ints, &crossing_dict).unwrap();
+
+    let vec = add_twins(vec, &twin_mapping);
+
+    // Writing result in output file (name same as input, extension changed)
+    let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
+    let _ = std::fs::write(outname, v.join("\n"));
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
     println!("peak memory: {} mb", peak_mem);
 }
+
+
+fn add_twins(vec: Vec<usize>, twin_mapping: &HashMap<usize,usize>) -> Vec<usize> {
+
+    let mut inverse_mapping: HashMap<usize, Vec<usize>> = HashMap::new();
+
+    for (u,v) in twin_mapping.iter() {
+        if let Some(vector) = inverse_mapping.get_mut(v) {
+            (*vector).push(*u);
+        }
+        else {
+            let mut vector = Vec::new();
+            vector.push(*u);
+            inverse_mapping.insert(*v, vector);
+        }
+    }
+
+    let mut new_vec: Vec<usize> = Vec::new();
+    for u in vec {
+        if let Some(vector) = inverse_mapping.get(&u) {
+            for v in vector {
+                new_vec.push(*v);
+            }
+        }
+        new_vec.push(u);
+    }
+    return new_vec;
+}
+
+
+//fn process_twins_ints(twin_mapping: &HashMap<usize,usize>,ints: Vec<(usize, usize, usize)>) -> Vec<(usize,usize,usize)> {
+//    
+//    let mut new_ints: Vec<(usize,usize,usize)> = Vec::new();
+//
+//    for tup in &ints {
+//        if twin_mapping.contains_key(&tup.0) {
+//            continue
+//        }
+//        new_ints.push(*tup);
+//    }
+//    return new_ints;
+//}
+
+fn process_twins_crossing_dict(twin_mapping: &HashMap<usize,usize>, 
+                 crossing_dict: &HashMap<(usize, usize), usize>) ->  HashMap<(usize, usize), usize>
+{
+
+    let mut new_crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
+
+    for ((u,v), c) in crossing_dict.iter() {
+        let mut w = u;
+        let mut x = v;
+        if let Some(y) = twin_mapping.get(u) {
+            w = y;
+        }
+        if let Some(z) = twin_mapping.get(v) {
+            x = z;
+        }
+        if let Some(c2) = new_crossing_dict.get(&(*w,*x)) {
+            new_crossing_dict.insert((*w,*x), *c2+*c);
+        }
+        else {
+            new_crossing_dict.insert((*w,*x), *c);
+        }
+    }
+    return new_crossing_dict;
+}
+
 
 /// Computing the number of binary numbers having Hamming
 /// weight w and L bits in their decomposition (with potential
@@ -90,6 +164,13 @@ fn kobayashi_tamaki(
     ints: &Vec<(usize, usize, usize)>,
     crossing_dict: &HashMap<(usize, usize), usize>,
 ) -> Result<Vec<usize>, String> {
+    if ints.len()==1 {
+        let mut vec = Vec::new();
+        vec.push(ints[0].0);
+        return Ok(vec);
+    }
+
+
     // 2|Y| in the article. we start at 0 here.
     let max_t: usize = 2 * ints.len();
 
@@ -168,7 +249,6 @@ fn kobayashi_tamaki(
             }
         }
     }
-    println!("table {:?}", opt);
     println!("OPT {:?}", opt[max_t - 1][0]);
 
     // reconstructing solution
@@ -223,52 +303,52 @@ fn kobayashi_tamaki(
     Ok(solution) // It is a return (see "expressions" in rust)
 }
 
-/// Computation of all crossing values c(u,v) for u,v two
-/// vertices of Y, the side of the graph that must be ordered.
-/// The result is an Hashmap associating keys (u,v) to
-/// the integer value c(u,v), the number of crossings
-/// obtained between edges adjacent to u and edges
-/// adjacent to v if u is placed before v in the order.
-///
-/// It works by first compuring $d^{<x}(u)$, the number of neighbors
-/// of $u$ (a vertex of B) that are strictly before x, a vertex in A.
-/// Then, it uses the formula $$c(u,v) = \sum_{x\in N(u)} d^{<x}(v)$$
-fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize> {
-    
-    let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
-
-    // #1 compute all d^<x(u) O(|X||Y|)
-    for u in &graph.bnodes {
-        let mut d: usize = 0;
-        for x in &graph.anodes {
-            d_less_than_x.insert((u.id,x.id),d);
-            if u.neighbors.contains(&x.id) {
-                d += 1;
-            }
-        }
-    }
-
-    // #2 compute all crossing values
-    let mut crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
-   
-    for u in &graph.bnodes {
-        for v in &graph.bnodes {
-            if u.id==v.id {
-                continue;
-            }
-            for x in &u.neighbors {
-                if let Some(c) = crossing_dict.get(&(u.id,v.id)) {
-                    crossing_dict.insert((u.id,v.id),*c+d_less_than_x.get(&(v.id,*x)).unwrap());
-                }
-                else {
-                    crossing_dict.insert((u.id,v.id),*d_less_than_x.get(&(v.id,*x)).unwrap()); 
-                }
-            }
-        }
-    }
-
-    return crossing_dict;
-}
+///// Computation of all crossing values c(u,v) for u,v two
+///// vertices of Y, the side of the graph that must be ordered.
+///// The result is an Hashmap associating keys (u,v) to
+///// the integer value c(u,v), the number of crossings
+///// obtained between edges adjacent to u and edges
+///// adjacent to v if u is placed before v in the order.
+/////
+///// It works by first compuring $d^{<x}(u)$, the number of neighbors
+///// of $u$ (a vertex of B) that are strictly before x, a vertex in A.
+///// Then, it uses the formula $$c(u,v) = \sum_{x\in N(u)} d^{<x}(v)$$
+//fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize> {
+//    
+//    let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
+//
+//    // #1 compute all d^<x(u) O(|X||Y|)
+//    for u in &graph.bnodes {
+//        let mut d: usize = 0;
+//        for x in &graph.anodes {
+//            d_less_than_x.insert((u.id,x.id),d);
+//            if u.neighbors.contains(&x.id) {
+//                d += 1;
+//            }
+//        }
+//    }
+//
+//    // #2 compute all crossing values
+//    let mut crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
+//   
+//    for u in &graph.bnodes {
+//        for v in &graph.bnodes {
+//            if u.id==v.id {
+//                continue;
+//            }
+//            for x in &u.neighbors {
+//                if let Some(c) = crossing_dict.get(&(u.id,v.id)) {
+//                    crossing_dict.insert((u.id,v.id),*c+d_less_than_x.get(&(v.id,*x)).unwrap());
+//                }
+//                else {
+//                    crossing_dict.insert((u.id,v.id),*d_less_than_x.get(&(v.id,*x)).unwrap()); 
+//                }
+//            }
+//        }
+//    }
+//
+//    return crossing_dict;
+//}
 
 /// Computes crossing values for orientable pairs only.
 /// A pair (u,v) is orientable if neither $r_u\leq l_v$ nor $r_v\leq l_u$.
