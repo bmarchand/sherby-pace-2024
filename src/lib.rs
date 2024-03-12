@@ -1,5 +1,6 @@
 use clap::Parser;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 #[derive(Default, Debug)]
@@ -143,6 +144,92 @@ pub fn find_twins(graph: &Graph) -> HashMap<usize,usize> {
 
     return mapping;
 }
+
+
+/// Computes crossing values for orientable pairs only.
+/// A pair (u,v) is orientable if neither $r_u\leq l_v$ nor $r_v\leq l_u$.
+/// It does so by using the same formula as the function crossing_value,
+/// except that $d^{<x}(v)$ is only computed for a $x\in [l_v,r_v]$.
+/// Then, c(u,v) is only computed for orientable pairs.
+/// If a value of $d^{<x}(v)$ is requested for x smaller than $l_v$ or
+/// larger than $r_v$ then it is computed on the flies with its trivial values.
+pub fn orientable_crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize>  {
+
+    let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
+
+    // #1 compute d^<x(u) values that matter
+    for u in &graph.bnodes {
+        let mut d: usize = 0;
+        for x in (u.left)..=(u.right) {
+            d_less_than_x.insert((u.id,x),d);
+            if u.neighbors.contains(&x) {
+                d += 1;
+            }
+        }
+    }
+
+    // #1.5 prep work for orientable pairs
+    let mut left_end: HashMap<usize,usize> = HashMap::new();
+    let mut right_end: HashMap<usize,usize> = HashMap::new();
+    let mut neighbors: HashMap<usize, Vec<usize>> = HashMap::new();
+    for u in &graph.bnodes {
+        left_end.insert(u.id, u.left);
+        right_end.insert(u.id, u.right);
+        neighbors.insert(u.id, u.neighbors.clone());
+    }
+
+    let mut orientable_pairs: HashSet<(usize,usize)> = HashSet::new();
+    let mut active_vertices: HashSet<usize> = HashSet::new();
+    // #2 computing orientable pairs
+    for x in &graph.anodes {
+        for u in &x.neighbors {
+            if x.id==*left_end.get(u).unwrap() {
+                active_vertices.insert(*u);
+            }
+            if x.id==*right_end.get(u).unwrap() {
+                active_vertices.remove(u);
+            }
+            for w in &active_vertices {
+                orientable_pairs.insert((*u, *w));
+                orientable_pairs.insert((*w, *u));
+            }
+        }
+    }
+
+    // #3 compute crossing values for orientable pairs
+    let mut crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
+   
+    for (u,v) in orientable_pairs {
+        if u==v {
+            continue;
+        }
+        for x in neighbors.get(&u).unwrap() {
+
+            // reconstructing d<x(v)
+            let mut d = 0;
+            if x > right_end.get(&v).unwrap() {
+                d = neighbors.get(&v).unwrap().len(); 
+            }
+            else {
+                if x > left_end.get(&v).unwrap() {
+                    d = *d_less_than_x.get(&(v,*x)).unwrap();
+                }
+            }
+
+            // adding to crossing value
+            if let Some(c) = crossing_dict.get(&(u,v)) {
+                crossing_dict.insert((u,v),*c+d);
+            }
+            else {
+                crossing_dict.insert((u,v),d); 
+            }
+        }
+    }
+
+    return crossing_dict;
+    
+}
+
 
 //pub fn from_twin_list_to_mapping(twin_list: &HashSet<(usize,usize)>) -> HashMap<usize,usize> {
 //    // let us first figure out a mapping u->v (u merged into v) for every twin

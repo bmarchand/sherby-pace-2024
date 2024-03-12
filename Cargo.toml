@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
 peak_alloc = "0.2.0"
+petgraph = "0.6.4"
 
 [dev-dependencies]
 assert_cmd = "2.0.13"
