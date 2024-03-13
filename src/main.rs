@@ -1,7 +1,6 @@
 use clap::Parser;
 use sherby_pace_2024::*;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use peak_alloc::PeakAlloc;
 
 #[global_allocator]
@@ -14,25 +13,36 @@ fn main() {
     
     let mut crossing_dict = orientable_crossing_values(&graph);
 
+    // twins pre-processing
     let twin_mapping = find_twins(&graph);
     println!("{:?} twins out of {:?} vertices", twin_mapping.len(), graph.bnodes.len());
 
     let graph = process_twins_graph(graph, &twin_mapping);
-    println!("num vertices after {:?}", graph.bnodes.len());
+    println!("num vertices after twin processing {:?}", graph.bnodes.len());
 
     crossing_dict = process_twins_crossing_dict(&twin_mapping, &crossing_dict);
+    // end twins pre-processing
 
-    let ints = nice_interval_repr(&graph);
+    // scc computations
+    let sccs = compute_scc(&graph, &crossing_dict);
+    println!("number of SCCs {:?}", sccs.len());
 
-    let mut outname = args.graph.clone();
-    outname.set_extension("sol");
+    // final solution init
+    let mut vec: Vec<usize> = Vec::new();
 
-    // main call
-    let vec = kobayashi_tamaki(&ints, &crossing_dict).unwrap();
+    // main calls
+    for scc in &sccs {
+        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+        vec.extend_from_slice(&vec_scc);
+    }
 
+    // twins post-processing
     let vec = add_twins(vec, &twin_mapping);
+    // end twin post-processing
 
     // Writing result in output file (name same as input, extension changed)
+    let mut outname = args.graph.clone();
+    outname.set_extension("sol");
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     let _ = std::fs::write(outname, v.join("\n"));
 
@@ -161,15 +171,16 @@ fn set_crossing(s: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize)
 /// The result is an Ok value if there is indeed an ordering allowing
 /// less than k crossings, and Err otherwise.
 fn kobayashi_tamaki(
-    ints: &Vec<(usize, usize, usize)>,
+    graph: &Graph,
     crossing_dict: &HashMap<(usize, usize), usize>,
 ) -> Result<Vec<usize>, String> {
-    if ints.len()==1 {
+    if graph.bnodes.len()==1 {
         let mut vec = Vec::new();
-        vec.push(ints[0].0);
+        vec.push(graph.bnodes[0].id);
         return Ok(vec);
     }
 
+    let ints = nice_interval_repr(graph);
 
     // 2|Y| in the article. we start at 0 here.
     let max_t: usize = 2 * ints.len();
@@ -188,7 +199,11 @@ fn kobayashi_tamaki(
         b.insert(tup.2, tup.0);
         for t in (tup.1)..(tup.2) {
             // or_default puts an empty vector if t entry does not exist.
-            m.entry(t).or_default().push(tup.0);
+            let mt = m.entry(t).or_default();
+            match mt.binary_search(&tup.0) {
+                Ok(_) => {}
+                Err(pos) => mt.insert(pos, tup.0),
+            }
         }
         for t in (tup.2)..max_t {
             l.entry(t).or_default().push(tup.0)
@@ -234,7 +249,7 @@ fn kobayashi_tamaki(
                     let mut best_sc = usize::MAX;
                     for x in &s {
                         let mut s2 = s.clone();
-                        s2.remove(s2.binary_search(&x).unwrap());
+                        s2.remove(s2.binary_search(&x).expect("If not found, it might because s2 is not sorted"));
 
                         let mut sc: usize = opt[t][vec2int(&s2, &m[&t])];
                         sc += set_crossing(&l[&t], *x, &crossing_dict);
@@ -249,7 +264,7 @@ fn kobayashi_tamaki(
             }
         }
     }
-    println!("OPT {:?}", opt[max_t - 1][0]);
+//    println!("OPT {:?}", opt[max_t - 1][0]);
 
     // reconstructing solution
     let mut solution = Vec::new();
@@ -366,6 +381,7 @@ fn exclude_first(p: &(usize, i32, i32)) -> (i32, i32) {
 /// I.e. the identifier of the node, the left end of the interval
 /// and the right-end of the interval
 fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
+
     let mut p = Vec::new();
 
     for node in &graph.bnodes {

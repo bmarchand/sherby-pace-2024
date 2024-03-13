@@ -2,6 +2,7 @@ use clap::Parser;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use petgraph::algo::*;
 
 #[derive(Default, Debug)]
 pub struct Graph {
@@ -230,6 +231,83 @@ pub fn orientable_crossing_values(graph: &Graph) -> HashMap<(usize, usize), usiz
     
 }
 
+pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize,usize),usize>) -> Vec<Graph> {
+
+    // just mapping id to bnode to remember it
+    let mut id_to_bnodes: HashMap<usize, &BNode> = HashMap::new(); 
+    for u in &graph.bnodes {
+        id_to_bnodes.insert(u.id, u);
+    }
+//    println!("id_to_bnodes {:?}", id_to_bnodes);
+    
+    // directed graph
+    let mut h = petgraph::graph::Graph::<usize,usize>::new();
+
+    let mut map: HashMap<usize, petgraph::graph::NodeIndex> = HashMap::new();
+    let mut inverse_map: HashMap<usize, usize> = HashMap::new();
+
+    for u in &graph.bnodes {
+        let nu = h.add_node(u.id);
+        map.insert(u.id, nu);
+        inverse_map.insert(nu.index(), u.id);
+    }
+
+    for (u,v) in crossing_dict.keys() {
+        if let Some(c) = crossing_dict.get(&(*v,*u)) {
+            if *c > *crossing_dict.get(&(*u,*v)).unwrap() {
+                let a = *map.get(u).unwrap();
+                let b = *map.get(v).unwrap(); 
+                if !h.contains_edge(a,b) {
+                    h.add_edge(a,b,1);
+                }
+            }
+            else if *c < *crossing_dict.get(&(*u,*v)).unwrap() {
+                let a = *map.get(v).unwrap();
+                let b = *map.get(u).unwrap(); 
+                if !h.contains_edge(a,b) {
+                    h.add_edge(a,b,1);
+                }
+            }
+        }
+    }
+
+    for u in &graph.bnodes {
+        for v in &graph.bnodes {
+            if u.id != v.id {
+                if u.right <= v.left && u.left < v.right {
+                    let a = *map.get(&u.id).unwrap();
+                    let b = *map.get(&v.id).unwrap(); 
+                    if !h.contains_edge(a,b) {
+                        h.add_edge(a,b,1);
+                    }
+                }
+            }
+        }
+    }
+
+//    println!("map {:?}", map);
+//    println!("directed graph {:?}", h);
+    let sccs = tarjan_scc(&h);
+//    println!("sccs {:?}", sccs);
+
+    let mut graph_vec: Vec<Graph> = Vec::new();
+    for scc in &sccs {
+        let mut graph_scc: Graph = Default::default();
+        for u in scc {
+            let id = inverse_map.get(&u.index()).unwrap();
+            let bnode = *id_to_bnodes.get(&id).unwrap();
+            graph_scc.bnodes.push(BNode {id: bnode.id, 
+                                         left: bnode.left, 
+                                         right: bnode.right, 
+                                         neighbors: bnode.neighbors.clone(),
+                                         ..Default::default() });
+        }
+        graph_vec.push(graph_scc);
+    }
+    graph_vec.reverse();
+
+    return graph_vec;
+}
 
 //pub fn from_twin_list_to_mapping(twin_list: &HashSet<(usize,usize)>) -> HashMap<usize,usize> {
 //    // let us first figure out a mapping u->v (u merged into v) for every twin
