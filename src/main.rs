@@ -1,7 +1,7 @@
 use clap::Parser;
+use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 use std::collections::HashMap;
-use peak_alloc::PeakAlloc;
 
 #[global_allocator]
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
@@ -10,15 +10,22 @@ fn main() {
     let args = Cli::parse();
 
     let graph: Graph = parse_graph(&args.graph);
-    
+
     let mut crossing_dict = orientable_crossing_values(&graph);
 
     // twins pre-processing
     let twin_mapping = find_twins(&graph);
-    println!("{:?} twins out of {:?} vertices", twin_mapping.len(), graph.bnodes.len());
+    println!(
+        "{:?} twins out of {:?} vertices",
+        twin_mapping.len(),
+        graph.bnodes.len()
+    );
 
     let graph = process_twins_graph(graph, &twin_mapping);
-    println!("num vertices after twin processing {:?}", graph.bnodes.len());
+    println!(
+        "num vertices after twin processing {:?}",
+        graph.bnodes.len()
+    );
 
     crossing_dict = process_twins_crossing_dict(&twin_mapping, &crossing_dict);
     // end twins pre-processing
@@ -50,16 +57,13 @@ fn main() {
     println!("peak memory: {} mb", peak_mem);
 }
 
-
-fn add_twins(vec: Vec<usize>, twin_mapping: &HashMap<usize,usize>) -> Vec<usize> {
-
+fn add_twins(vec: Vec<usize>, twin_mapping: &HashMap<usize, usize>) -> Vec<usize> {
     let mut inverse_mapping: HashMap<usize, Vec<usize>> = HashMap::new();
 
-    for (u,v) in twin_mapping.iter() {
+    for (u, v) in twin_mapping.iter() {
         if let Some(vector) = inverse_mapping.get_mut(v) {
             (*vector).push(*u);
-        }
-        else {
+        } else {
             let mut vector = Vec::new();
             vector.push(*u);
             inverse_mapping.insert(*v, vector);
@@ -78,9 +82,8 @@ fn add_twins(vec: Vec<usize>, twin_mapping: &HashMap<usize,usize>) -> Vec<usize>
     return new_vec;
 }
 
-
 //fn process_twins_ints(twin_mapping: &HashMap<usize,usize>,ints: Vec<(usize, usize, usize)>) -> Vec<(usize,usize,usize)> {
-//    
+//
 //    let mut new_ints: Vec<(usize,usize,usize)> = Vec::new();
 //
 //    for tup in &ints {
@@ -92,13 +95,13 @@ fn add_twins(vec: Vec<usize>, twin_mapping: &HashMap<usize,usize>) -> Vec<usize>
 //    return new_ints;
 //}
 
-fn process_twins_crossing_dict(twin_mapping: &HashMap<usize,usize>, 
-                 crossing_dict: &HashMap<(usize, usize), usize>) ->  HashMap<(usize, usize), usize>
-{
+fn process_twins_crossing_dict(
+    twin_mapping: &HashMap<usize, usize>,
+    crossing_dict: &HashMap<(usize, usize), usize>,
+) -> HashMap<(usize, usize), usize> {
+    let mut new_crossing_dict: HashMap<(usize, usize), usize> = HashMap::new();
 
-    let mut new_crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
-
-    for ((u,v), c) in crossing_dict.iter() {
+    for ((u, v), c) in crossing_dict.iter() {
         let mut w = u;
         let mut x = v;
         if let Some(y) = twin_mapping.get(u) {
@@ -107,16 +110,14 @@ fn process_twins_crossing_dict(twin_mapping: &HashMap<usize,usize>,
         if let Some(z) = twin_mapping.get(v) {
             x = z;
         }
-        if let Some(c2) = new_crossing_dict.get(&(*w,*x)) {
-            new_crossing_dict.insert((*w,*x), *c2+*c);
-        }
-        else {
-            new_crossing_dict.insert((*w,*x), *c);
+        if let Some(c2) = new_crossing_dict.get(&(*w, *x)) {
+            new_crossing_dict.insert((*w, *x), *c2 + *c);
+        } else {
+            new_crossing_dict.insert((*w, *x), *c);
         }
     }
     return new_crossing_dict;
 }
-
 
 /// Computing the number of binary numbers having Hamming
 /// weight w and L bits in their decomposition (with potential
@@ -174,7 +175,7 @@ fn kobayashi_tamaki(
     graph: &Graph,
     crossing_dict: &HashMap<(usize, usize), usize>,
 ) -> Result<Vec<usize>, String> {
-    if graph.bnodes.len()==1 {
+    if graph.bnodes.len() == 1 {
         let mut vec = Vec::new();
         vec.push(graph.bnodes[0].id);
         return Ok(vec);
@@ -249,7 +250,10 @@ fn kobayashi_tamaki(
                     let mut best_sc = usize::MAX;
                     for x in &s {
                         let mut s2 = s.clone();
-                        s2.remove(s2.binary_search(&x).expect("If not found, it might because s2 is not sorted"));
+                        s2.remove(
+                            s2.binary_search(&x)
+                                .expect("If not found, it might because s2 is not sorted"),
+                        );
 
                         let mut sc: usize = opt[t][vec2int(&s2, &m[&t])];
                         sc += set_crossing(&l[&t], *x, &crossing_dict);
@@ -264,7 +268,7 @@ fn kobayashi_tamaki(
             }
         }
     }
-//    println!("OPT {:?}", opt[max_t - 1][0]);
+    //    println!("OPT {:?}", opt[max_t - 1][0]);
 
     // reconstructing solution
     let mut solution = Vec::new();
@@ -329,7 +333,7 @@ fn kobayashi_tamaki(
 ///// of $u$ (a vertex of B) that are strictly before x, a vertex in A.
 ///// Then, it uses the formula $$c(u,v) = \sum_{x\in N(u)} d^{<x}(v)$$
 //fn crossing_values(graph: &Graph) -> HashMap<(usize, usize), usize> {
-//    
+//
 //    let mut d_less_than_x: HashMap<(usize,usize), usize> = HashMap::new();
 //
 //    // #1 compute all d^<x(u) O(|X||Y|)
@@ -345,7 +349,7 @@ fn kobayashi_tamaki(
 //
 //    // #2 compute all crossing values
 //    let mut crossing_dict: HashMap<(usize,usize), usize> = HashMap::new();
-//   
+//
 //    for u in &graph.bnodes {
 //        for v in &graph.bnodes {
 //            if u.id==v.id {
@@ -356,7 +360,7 @@ fn kobayashi_tamaki(
 //                    crossing_dict.insert((u.id,v.id),*c+d_less_than_x.get(&(v.id,*x)).unwrap());
 //                }
 //                else {
-//                    crossing_dict.insert((u.id,v.id),*d_less_than_x.get(&(v.id,*x)).unwrap()); 
+//                    crossing_dict.insert((u.id,v.id),*d_less_than_x.get(&(v.id,*x)).unwrap());
 //                }
 //            }
 //        }
@@ -364,7 +368,6 @@ fn kobayashi_tamaki(
 //
 //    return crossing_dict;
 //}
-
 
 /// a simple function that excludes the first component
 /// of a tuple, so that it may be ignored in a lexico-graphic
@@ -381,7 +384,6 @@ fn exclude_first(p: &(usize, i32, i32)) -> (i32, i32) {
 /// I.e. the identifier of the node, the left end of the interval
 /// and the right-end of the interval
 fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
-
     let mut p = Vec::new();
 
     for node in &graph.bnodes {

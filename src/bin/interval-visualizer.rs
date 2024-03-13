@@ -51,16 +51,17 @@ fn write_graph_svg(filename: &String, graph: &Graph, interval_mode: bool) {
         "<svg width='{:?}' height='{:?}' xmlns='http://www.w3.org/2000/svg'>\n",
         maxr * unitw,
         docheight
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut cpt: usize = 0;
 
     if interval_mode {
         for (_i, l, r) in &ints {
-            write!(data_file, 
-                "<line x1='{:?}' y1='{:?}' x2='{:?}' y2='{:?}' stroke='black' stroke-width='7' />\n", 
-                l * unitw, cpt * unith, 
-                r * unitw + unitw / 2, 
+            write!(data_file,
+                "<line x1='{:?}' y1='{:?}' x2='{:?}' y2='{:?}' stroke='black' stroke-width='7' />\n",
+                l * unitw, cpt * unith,
+                r * unitw + unitw / 2,
                 cpt * unith).unwrap();
             cpt += 1;
         }
