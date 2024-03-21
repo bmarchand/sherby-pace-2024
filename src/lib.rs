@@ -34,6 +34,76 @@ pub struct Cli {
     pub graph: std::path::PathBuf,
 }
 
+pub fn parse_graph_cutwidth(file_name: &PathBuf) -> Graph {
+    let content = std::fs::read_to_string(file_name).expect("could not read file");
+
+    // graph initialization
+    let mut graph: Graph = Default::default();
+    let mut n0: usize = 0;
+
+    // parsing file
+    for line in content.lines() {
+        if line.starts_with("p") {
+            n0 = line
+                .split_whitespace()
+                .nth(2)
+                .expect("should be the number of vertices in A")
+                .parse()
+                .unwrap();
+            let n1: usize = line
+                .split_whitespace()
+                .nth(3)
+                .expect("should be the number of vertices in B")
+                .parse()
+                .unwrap();
+            for x in 1..=n0 {
+                graph.anodes.push(ANode {
+                    id: x,
+                    ..Default::default()
+                });
+            }
+            for y in (n0 + 1)..=(n0 + n1) {
+                graph.bnodes.push(BNode {
+                    id: y,
+                    left: n0,
+                    right: 0,
+                    ..Default::default()
+                });
+            }
+            continue;
+        }
+
+        if line.split_whitespace().count() < 2 {
+            continue;
+        }
+
+        let a: usize = line
+            .split_whitespace()
+            .nth(0)
+            .expect("should be an A vertex")
+            .parse()
+            .unwrap();
+
+        let b: usize = line
+            .split_whitespace()
+            .nth(1)
+            .expect("should be a B vertex")
+            .parse()
+            .unwrap();
+
+        graph.anodes[a - 1].neighbors.push(b);
+        graph.bnodes[b - n0 - 1].neighbors.push(a);
+        if graph.bnodes[b - n0 - 1].left > a {
+            graph.bnodes[b - n0 - 1].left = a;
+        }
+        if graph.bnodes[b - n0 - 1].right < a {
+            graph.bnodes[b - n0 - 1].right = a;
+        }
+    }
+
+    return graph;
+}
+
 pub fn parse_graph(file_name: &PathBuf) -> Graph {
     let content = std::fs::read_to_string(file_name).expect("could not read file");
 
@@ -259,6 +329,9 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
             }
         }
     }
+    //    println!("simplified graph");
+    //    println!("{:?}", petgraph::dot::Dot::with_config(&h, &[petgraph::dot::Config::NodeIndexLabel]));
+    //    println!("end simplified graph");
 
     for u in &graph.bnodes {
         for v in &graph.bnodes {
@@ -267,12 +340,29 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
                     let a = *map.get(&u.id).unwrap();
                     let b = *map.get(&v.id).unwrap();
                     if !h.contains_edge(a, b) {
-                        h.add_edge(a, b, 1);
+                        h.add_edge(a, b, 0);
                     }
                 }
             }
         }
     }
+
+    //    for u in &graph.bnodes {
+    //        for v in &graph.bnodes {
+    //            if u.id !=v.id {
+    //                let a = *map.get(&u.id).unwrap();
+    //                let b = *map.get(&v.id).unwrap();
+    //                if !h.contains_edge(a,b) && !h.contains_edge(b,a) {
+    //                    assert_eq!(*crossing_dict.get(&(u.id, v.id)).unwrap(),*crossing_dict.get(&(v.id, u.id)).unwrap());
+    //                }
+    //            }
+    //        }
+    //    }
+    println!(
+        "h has {:?} edges over {:?} possible",
+        h.edge_count(),
+        h.node_count() * (h.node_count() - 1) / 2
+    );
 
     //    println!("map {:?}", map);
     //    println!("directed graph {:?}", h);
@@ -281,6 +371,11 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
 
     let mut graph_vec: Vec<Graph> = Vec::new();
     for scc in &sccs {
+        // dot visu
+        //        let mut scc_h = h.clone();
+        //        scc_h.retain_nodes(|scc_h,u| scc.contains(&u));
+        //        println!("{:?}", petgraph::dot::Dot::with_config(&scc_h, &[petgraph::dot::Config::NodeIndexLabel]));
+
         let mut graph_scc: Graph = Default::default();
         for u in scc {
             let id = inverse_map.get(&u.index()).unwrap();
@@ -298,6 +393,316 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
     graph_vec.reverse();
 
     return graph_vec;
+}
+
+pub fn add_twins(vec: Vec<usize>, twin_mapping: &HashMap<usize, usize>) -> Vec<usize> {
+    let mut inverse_mapping: HashMap<usize, Vec<usize>> = HashMap::new();
+
+    for (u, v) in twin_mapping.iter() {
+        if let Some(vector) = inverse_mapping.get_mut(v) {
+            (*vector).push(*u);
+        } else {
+            let mut vector = Vec::new();
+            vector.push(*u);
+            inverse_mapping.insert(*v, vector);
+        }
+    }
+
+    let mut new_vec: Vec<usize> = Vec::new();
+    for u in vec {
+        if let Some(vector) = inverse_mapping.get(&u) {
+            for v in vector {
+                new_vec.push(*v);
+            }
+        }
+        new_vec.push(u);
+    }
+    return new_vec;
+}
+
+/// a simple function that excludes the first component
+/// of a tuple, so that it may be ignored in a lexico-graphic
+/// ordering
+fn exclude_first(p: &(usize, i32, i32)) -> (i32, i32) {
+    (p.1, p.2)
+}
+
+fn int2vec(x: usize, v: &Vec<usize>) -> Vec<usize> {
+    let mut s = Vec::new();
+    for (i, y) in v.iter().enumerate() {
+        // if i-th bit of x is 1, y in s
+        if (x >> i) & 1 != 0 {
+            s.push(*y);
+        }
+    }
+    return s;
+}
+
+fn vec2int(s: &Vec<usize>, v: &Vec<usize>) -> usize {
+    let mut m: HashMap<usize, usize> = HashMap::new();
+    for (i, y) in v.iter().enumerate() {
+        m.insert(*y, i);
+    }
+    let mut x: usize = 0;
+    for y in s {
+        x += usize::pow(2, m.remove(&y).unwrap().try_into().unwrap());
+    }
+    return x;
+}
+
+fn set_crossing(s: &Vec<usize>, x: usize, crossing_dict: &HashMap<(usize, usize), usize>) -> usize {
+    let mut c: usize = 0;
+    for u in s {
+        c += crossing_dict.get(&(*u, x)).unwrap_or(&(0 as usize));
+    }
+    return c;
+}
+
+/// Computes a nice interval representation, in the sense of the
+/// \mathcal{J} set of intervals in the article of Kobayashi and
+/// Tamaki.
+///
+/// The entries of the output vector are of the form (y, a_y, b_y).
+/// I.e. the identifier of the node, the left end of the interval
+/// and the right-end of the interval
+fn nice_interval_repr(graph: &Graph) -> Vec<(usize, usize, usize)> {
+    let mut p = Vec::new();
+
+    for node in &graph.bnodes {
+        let degree: i32 = node.neighbors.len() as i32;
+        let pl: (usize, i32, i32) = (node.id, node.left as i32, 10 * (degree - 1));
+        let pr: (usize, i32, i32) = (node.id, node.right as i32, -10 * (degree - 1) + 1);
+        p.push(pl);
+        p.push(pr);
+    }
+
+    // lexico-graphic order while ignoring first
+    p.sort_by(|a, b| exclude_first(a).cmp(&exclude_first(b)));
+
+    let mut left_end = HashMap::new();
+    let mut right_end = HashMap::new();
+
+    for (idx, tup) in p.iter().enumerate() {
+        if tup.2 >= 10 || tup.2 == 0 {
+            left_end.insert(tup.0, idx);
+        }
+        if tup.2 < 0 || tup.2 == 1 {
+            right_end.insert(tup.0, idx);
+        }
+    }
+
+    let mut ret = Vec::new();
+
+    for node in &graph.bnodes {
+        ret.push((
+            node.id,
+            *left_end
+                .get(&node.id)
+                .expect("node is not present in left end list"),
+            *right_end
+                .get(&node.id)
+                .expect("node is not present in right end list"),
+        ));
+    }
+
+    return ret;
+}
+
+/// The main algorithm. Let us recall the format of the input:
+///     - ints: contains the nice interval representation, i.e.
+///     elements of the form (y, a_y, b_y).
+///     - crossing_dicts: given a tuple (u,v), tells you the number
+///     of crossings between edges adjacent to u and edges adjacent to v
+///     when placing u before v.
+///     - k: the upper allowed limit to the number of crossings
+///
+/// The result is an Ok value if there is indeed an ordering allowing
+/// less than k crossings, and Err otherwise.
+pub fn kobayashi_tamaki(
+    graph: &Graph,
+    crossing_dict: &HashMap<(usize, usize), usize>,
+) -> Result<Vec<usize>, String> {
+    if graph.bnodes.len() == 1 {
+        let mut vec = Vec::new();
+        vec.push(graph.bnodes[0].id);
+        return Ok(vec);
+    }
+
+    let ints = nice_interval_repr(graph);
+
+    // 2|Y| in the article. we start at 0 here.
+    let max_t: usize = 2 * ints.len();
+
+    // computing the sets L_t and M_t, recording when t=a_y or t=b_y
+    let mut m: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Mt elements
+    let mut l: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Lt elements
+    for t in 0..max_t {
+        l.entry(t).or_default();
+        m.entry(t).or_default();
+    }
+    let mut a: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
+    let mut b: HashMap<usize, usize> = HashMap::new(); // t to y such that t=b_y
+    for tup in ints {
+        a.insert(tup.1, tup.0);
+        b.insert(tup.2, tup.0);
+        for t in (tup.1)..(tup.2) {
+            // or_default puts an empty vector if t entry does not exist.
+            let mt = m.entry(t).or_default();
+            match mt.binary_search(&tup.0) {
+                Ok(_) => {}
+                Err(pos) => mt.insert(pos, tup.0),
+            }
+        }
+        for t in (tup.2)..max_t {
+            l.entry(t).or_default().push(tup.0)
+        }
+    }
+
+    // Looking at size of largest M_t
+    let mut mt_sizes = Vec::new();
+    //    let mut h: u32 = 0;
+    for t in 0..max_t {
+        let v = m.get(&t).unwrap();
+        mt_sizes.push(v.len() as u32);
+        //        h = std::cmp::max(h, v.len() as u32);
+    }
+
+    // dynamic programming table initialization
+    //    let mut opt = vec![Vec::new(); m.len()];
+    //    for (t, v) in opt.iter_mut().enumerate() {
+    //        let new_size = usize::pow(2, mt_sizes[t]); // size depends on t
+    //        v.resize(new_size, 0); // init at zero (!)
+    //    }
+
+    // pointer towards best assignment
+    let mut ptr: HashMap<(usize, usize), usize> = HashMap::new();
+
+    // the two vec. playing the role of opt[t-1] and opt[t]
+    let mut vec_b: Vec<usize> = vec![0, usize::pow(2, mt_sizes[0])];
+
+    // first iteration
+    let y = a
+        .get(&0)
+        .expect("the first thing to happen should be an interval opening");
+    ptr.insert((0, 1), *y);
+
+    // filling table
+    for t in 1..(m.len()) {
+        // TODO: iteration below is naive, and inefficient in terms of contiguity.
+        let vec_a = vec_b.clone();
+        vec_b.resize(usize::pow(2, mt_sizes[t]), 0);
+
+        for x in 0..usize::pow(2, mt_sizes[t]) {
+            let mut s = int2vec(x, &m[&t]);
+
+            // if t is b_y for some y
+            if let Some(y) = b.get(&t) {
+                match s.binary_search(&y) {
+                    Ok(_) => {}
+                    Err(pos) => s.insert(pos, *y),
+                }
+                //                opt[t][x] = opt[t - 1][vec2int(&s, &m[&(t - 1)])];
+                vec_b[x] = vec_a[vec2int(&s, &m[&(t - 1)])];
+            }
+
+            // if t is a_y for some y
+            if let Some(y) = a.get(&t) {
+                if !s.contains(&y) {
+                    //                    opt[t][x] = opt[t - 1][vec2int(&int2vec(x, &m[&t]), &m[&(t - 1)])];
+                    vec_b[x] = vec_a[vec2int(&int2vec(x, &m[&t]), &m[&(t - 1)])];
+                } else {
+                    let mut best_sc = usize::MAX;
+                    let mut best_x = usize::MAX;
+                    for x in &s {
+                        let mut s2 = s.clone();
+                        s2.remove(
+                            s2.binary_search(&x)
+                                .expect("If not found, it might because s2 is not sorted"),
+                        );
+
+                        let index: usize = vec2int(&s2, &m[&t]);
+                        //                        let mut sc: usize = opt[t][index];
+                        let mut sc: usize = vec_b[index];
+                        sc += set_crossing(&l[&t], *x, &crossing_dict);
+                        sc += set_crossing(&s2, *x, &crossing_dict);
+
+                        if sc < best_sc {
+                            best_sc = sc;
+                            best_x = *x;
+                        }
+                    }
+                    //                    opt[t][x] = best_sc;
+                    vec_b[x] = best_sc;
+                    ptr.insert((t, x), best_x);
+                }
+            }
+        }
+    }
+    //    println!("OPT {:?}", opt[max_t - 1][0]);
+
+    // reconstructing solution
+    let mut solution = Vec::new();
+    let mut s: Vec<usize> = Vec::new();
+    let mut t: usize = max_t - 1;
+
+    loop {
+        if t == 0 && s.len() == 0 {
+            break;
+        }
+        // if t is b_y for some y
+        if let Some(y) = b.get(&t) {
+            t -= 1;
+            match s.binary_search(&y) {
+                Ok(_pos) => {}
+                Err(pos) => s.insert(pos, *y),
+            }
+        }
+
+        // if t is a_y for some y
+        if let Some(y) = a.get(&t) {
+            if !s.contains(&y) {
+                t -= 1;
+            } else {
+                if t == 0 {
+                    assert_eq!(s.len(), 1);
+                }
+                let best_x = ptr.get(&(t, vec2int(&s, &m[&t]))).unwrap();
+                solution.push(*best_x);
+                s.remove(s.binary_search(best_x).unwrap());
+            }
+        }
+    }
+    solution.reverse();
+
+    //    let mut v = Vec::new();
+    //    for p in ints {
+    //        v.push(p.0);
+    //    }
+    Ok(solution) // It is a return (see "expressions" in rust)
+}
+
+pub fn process_twins_crossing_dict(
+    twin_mapping: &HashMap<usize, usize>,
+    crossing_dict: &HashMap<(usize, usize), usize>,
+) -> HashMap<(usize, usize), usize> {
+    let mut new_crossing_dict: HashMap<(usize, usize), usize> = HashMap::new();
+
+    for ((u, v), c) in crossing_dict.iter() {
+        let mut w = u;
+        let mut x = v;
+        if let Some(y) = twin_mapping.get(u) {
+            w = y;
+        }
+        if let Some(z) = twin_mapping.get(v) {
+            x = z;
+        }
+        if let Some(c2) = new_crossing_dict.get(&(*w, *x)) {
+            new_crossing_dict.insert((*w, *x), *c2 + *c);
+        } else {
+            new_crossing_dict.insert((*w, *x), *c);
+        }
+    }
+    return new_crossing_dict;
 }
 
 //pub fn from_twin_list_to_mapping(twin_list: &HashSet<(usize,usize)>) -> HashMap<usize,usize> {
