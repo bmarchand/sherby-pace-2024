@@ -2,3 +2,5 @@ target/
 Cargo.lock
 *.svg
 exact-public-instances/*.sol
+cutwidth-public/*.sol
+*.no_preprocess_sol
