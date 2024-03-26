@@ -534,7 +534,7 @@ pub fn kobayashi_tamaki(
     let max_t: usize = 2 * ints.len();
 
     // computing the sets L_t and M_t, recording when t=a_y or t=b_y
-    let mut m: Vec<Vec<usize>> = vec![Vec::new(); max_t];// t to sorted list of Mt elements
+    let mut m: Vec<Vec<usize>> = vec![Vec::new(); max_t]; // t to sorted list of Mt elements
     let mut l: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Lt elements
     for t in 0..max_t {
         l.entry(t).or_default();
@@ -560,24 +560,24 @@ pub fn kobayashi_tamaki(
     let mut mt_sizes = Vec::new();
     //    let mut h: u32 = 0;
     for t in 0..max_t {
-        let v = &m[t];//.get(&t).unwrap();
+        let v = &m[t]; //.get(&t).unwrap();
         mt_sizes.push(v.len());
         //        h = std::cmp::max(h, v.len() as u32);
     }
-    
+
     // pos
     let mut pos: HashMap<(usize, usize), usize> = HashMap::new();
     for t in 0..max_t {
-        for (p, x) in m[t].iter().enumerate() {
-            pos.insert((t,*x), p);
+        for (p, u) in m[t].iter().enumerate() {
+            pos.insert((t, *u), p);
         }
     }
 
     // lt crossings
-    let mut lt_crossings: HashMap<(usize,usize), usize> = HashMap::new();
+    let mut lt_crossings: Vec<Vec<usize>> = vec![Vec::new(); max_t];
     for t in 0..max_t {
-        for u in &graph.bnodes {
-            lt_crossings.insert((t,u.id),set_crossing(&l[&t], u.id, &crossing_dict));
+        for u in m[t].iter() {
+            lt_crossings[t].push(set_crossing(&l[&t], *u, &crossing_dict))
         }
     }
 
@@ -585,7 +585,7 @@ pub fn kobayashi_tamaki(
     let mut ptr: HashMap<(usize, usize), usize> = HashMap::new();
 
     // the vec. playing the role of opt[t]
-    let mut vec_b: Vec<usize> = vec![0 ; 1 << mt_sizes[0]];
+    let mut vec_b: Vec<usize> = vec![0; 1 << mt_sizes[0]];
 
     // first iteration
     let y = a
@@ -598,62 +598,74 @@ pub fn kobayashi_tamaki(
         let vec_a = vec_b.clone();
         vec_b.resize(1 << mt_sizes[t], 0);
 
-        for x in 0..(1 << mt_sizes[t]) {
+        let mut index_wise_crossing: Vec<Vec<usize>> = vec![vec![0; m[t].len()]; m[t].len()];
+        for p in 0..m[t].len() {
+            for p2 in 0..m[t].len() {
+                if p != p2 {
+                    index_wise_crossing[p][p2] = crossing_dict[&(m[t][p], m[t][p2])];
+                }
+            }
+        }
 
-            // if t is b_y for some y
-            if let Some(y) = b.get(&t) {
+        // if t is b_y for some y
+        if let Some(y) = b.get(&t) {
+            let p = pos.get(&(t - 1, *y)).unwrap();
+
+            for x in 0..(1 << mt_sizes[t]) {
                 // x = ***#### (pos = 4)
                 // tmp = ***
                 // tmp2 = ####
                 // new_x = ***1 then ***1#### (y has been inserted at its pos. it is counted
                 // starting from the en)
-                let p = pos.get(&(t-1,*y)).unwrap();
                 let tmp = x >> p; // ***
-
                 let mask = tmp << p; // ***0000
-                let tmp2 = x^mask;                 // 000####
-                let mut new_x = (tmp << 1) + 1;   // ***1
+                let tmp2 = x ^ mask; // 000####
+                let mut new_x = (tmp << 1) + 1; // ***1
                 new_x = (new_x << p) + tmp2; // ***10000+####
+
                 vec_b[x] = vec_a[new_x];
             }
+        }
 
-            // if t is a_y for some y
-            if let Some(y) = a.get(&t) {
-                let p = pos.get(&(t,*y)).unwrap();
-                if ( x >> p & 1) == 0 { // if x does not contain y
+        // if t is a_y for some y
+        if let Some(y) = a.get(&t) {
+            let p = pos.get(&(t, *y)).unwrap();
+
+            for x in 0..(1 << mt_sizes[t]) {
+                if (x >> p & 1) == 0 {
+                    // if x does not contain y
                     // ###0**** --> ###**** (here p=4)
-                    let mut tmp = x >> p+1;
-    
-                    let mask = tmp << p+1;
-                    let tmp2 = x^mask;
-
+                    let mut tmp = x >> p + 1;
+                    let mask = tmp << p + 1;
+                    let tmp2 = x ^ mask;
                     tmp = tmp << p;
-
                     let new_x = tmp + tmp2;
+
                     vec_b[x] = vec_a[new_x];
                 } else {
                     let mut best_sc = usize::MAX;
                     let mut best_x = usize::MAX;
                     for p in 0..mt_sizes[t] {
-                        if (x >> p) & 1 == 0  {
+                        // if m[p] not in the set represented by x
+                        if (x >> p) & 1 == 0 {
                             continue;
                         }
                         // ****1### -> ****0### (here p=3)
-                        let mut tmp = x >> p;
-                        let mask = tmp << p;
-                        let tmp2 = x^mask;
-                        tmp = (tmp >> 1) << 1; //removing last bit.
+                        let mut tmp = x >> p; // ****1
+                        let mask = tmp << p; // ****1000
+                        let tmp2 = x ^ mask; // 00000###
+                        tmp = (tmp >> 1) << 1; //****0 removing last bit.
+                        let index = (tmp << p) + tmp2; //****0###
 
-                        let index = (tmp << p) + tmp2;
                         let mut sc: usize = vec_b[index];
-                        sc += lt_crossings.get(&(t,m[t][p])).unwrap();
+                        sc += lt_crossings[t][p];
                         for p2 in 0..mt_sizes[t] {
                             if (x >> p2) & 1 == 0 {
                                 continue;
                             }
                             if p != p2 {
-                                sc += crossing_dict[&(m[t][p2],m[t][p])]
-//                                sc += index_wise_crossing[p2][p];
+                                //                                sc += crossing_dict[&(m[t][p2],m[t][p])]
+                                sc += index_wise_crossing[p2][p];
                             }
                         }
 

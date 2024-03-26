@@ -222,7 +222,6 @@ fn test_complete_4_5_no_preprocess() {
     )
 }
 
-
 #[test]
 fn test_cycle_8_shuffled_no_preprocess() {
     let mut cmd = Command::cargo_bin("no_preprocess").unwrap();
