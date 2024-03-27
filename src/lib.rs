@@ -372,11 +372,19 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
     //println!("{:?}", petgraph::dot::Dot::with_config(&h, &[petgraph::dot::Config::GraphContentOnly]));
 
     let mut graph_vec: Vec<Graph> = Vec::new();
-    for scc in &sccs {
-        // dot visu
-                let mut scc_h = h.clone();
-                scc_h.retain_nodes(|scc_h,u| scc.contains(&u));
-         println!("{:?}", petgraph::dot::Dot::with_config(&scc_h, &[petgraph::dot::Config::GraphContentOnly]));
+    let mut cnt = 0;
+//    println!("There are {:?} sccs", sccs.len());
+//    for scc in &sccs {
+//        println! ("SCC {:?}", cnt);
+//        cnt += 1;
+//        if scc.len() == 1 {
+//            println!("size=1");
+//            continue;
+//        }
+//        // dot visu
+//        let mut scc_h = h.clone();
+//        scc_h.retain_nodes(|scc_h,u| scc.contains(&u));
+//        println!("{:?}", petgraph::dot::Dot::with_config(&scc_h, &[petgraph::dot::Config::GraphContentOnly]));
 
         let mut graph_scc: Graph = Default::default();
         for u in scc {
@@ -595,23 +603,23 @@ pub fn kobayashi_tamaki(
         .expect("the first thing to happen should be an interval opening");
     ptr.insert((0, 1), *y);
 
-    let mut total_number_operations = 0;
-    for t in 1..(m.len()) {
-        total_number_operations +=  mt_sizes[t];
-    }
+//    let mut total_number_operations = 0;
+//    for t in 1..(m.len()) {
+//        total_number_operations +=  mt_sizes[t];
+//    }
 
-    let mut ops = 0;
-    let mut thresh = 0.01;
-    let inc = 0.01;
-
-    println!("mt sizes {:?}", mt_sizes);
+//    let mut ops = 0;
+//    let mut thresh = 0.01;
+//    let inc = 0.01;
+//
+//    println!("mt sizes {:?}", mt_sizes);
 
     // filling table
     for t in 1..(m.len()) {
 
         // estimating fraction of computation left
-        ops += mt_sizes[t-1];
-        println!("{:?} out of {:?}", ops, total_number_operations);
+//        ops += mt_sizes[t-1];
+//        println!("{:?} out of {:?}", ops, total_number_operations);
 //        if ops as f64 > thresh*(total_number_operations as f64) {
 //            print!("...{:?}", (thresh*100.0).floor());
 //            thresh += inc;
