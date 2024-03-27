@@ -314,17 +314,18 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
 
     for (u, v) in crossing_dict.keys() {
         if let Some(c) = crossing_dict.get(&(*v, *u)) {
-            if *c > *crossing_dict.get(&(*u, *v)).unwrap() {
+            let c2 = crossing_dict.get(&(*u, *v)).unwrap();
+            if *c > *c2 {
                 let a = *map.get(u).unwrap();
                 let b = *map.get(v).unwrap();
                 if !h.contains_edge(a, b) {
-                    h.add_edge(a, b, 1);
+                    h.add_edge(a, b, *c-*c2);
                 }
-            } else if *c < *crossing_dict.get(&(*u, *v)).unwrap() {
+            } else if *c < *c2 {
                 let a = *map.get(v).unwrap();
                 let b = *map.get(u).unwrap();
                 if !h.contains_edge(a, b) {
-                    h.add_edge(a, b, 1);
+                    h.add_edge(a, b, *c2-*c);
                 }
             }
         }
@@ -368,13 +369,14 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
     //    println!("directed graph {:?}", h);
     let sccs = tarjan_scc(&h);
     //    println!("sccs {:?}", sccs);
-    //println!("{:?}", petgraph::dot::Dot::with_config(&h, &[petgraph::dot::Config::NodeIndexLabel]));
+    //println!("{:?}", petgraph::dot::Dot::with_config(&h, &[petgraph::dot::Config::GraphContentOnly]));
 
     let mut graph_vec: Vec<Graph> = Vec::new();
     for scc in &sccs {
         // dot visu
-        //        let mut scc_h = h.clone();
-        //        scc_h.retain_nodes(|scc_h,u| scc.contains(&u));
+                let mut scc_h = h.clone();
+                scc_h.retain_nodes(|scc_h,u| scc.contains(&u));
+         println!("{:?}", petgraph::dot::Dot::with_config(&scc_h, &[petgraph::dot::Config::GraphContentOnly]));
 
         let mut graph_scc: Graph = Default::default();
         for u in scc {
@@ -593,11 +595,32 @@ pub fn kobayashi_tamaki(
         .expect("the first thing to happen should be an interval opening");
     ptr.insert((0, 1), *y);
 
+    let mut total_number_operations = 0;
+    for t in 1..(m.len()) {
+        total_number_operations +=  mt_sizes[t];
+    }
+
+    let mut ops = 0;
+    let mut thresh = 0.01;
+    let inc = 0.01;
+
+    println!("mt sizes {:?}", mt_sizes);
+
     // filling table
     for t in 1..(m.len()) {
+
+        // estimating fraction of computation left
+        ops += mt_sizes[t-1];
+        println!("{:?} out of {:?}", ops, total_number_operations);
+//        if ops as f64 > thresh*(total_number_operations as f64) {
+//            print!("...{:?}", (thresh*100.0).floor());
+//            thresh += inc;
+//        }
+
         let vec_a = vec_b.clone();
         vec_b.resize(1 << mt_sizes[t], 0);
 
+        // storing local scoring values to avoid calling HashMap 2**mt_sizes[t] times
         let mut index_wise_crossing: Vec<Vec<usize>> = vec![vec![0; m[t].len()]; m[t].len()];
         for p in 0..m[t].len() {
             for p2 in 0..m[t].len() {
@@ -680,6 +703,7 @@ pub fn kobayashi_tamaki(
             }
         }
     }
+    println!("");
 
     // reconstructing solution
     let mut solution = Vec::new();
