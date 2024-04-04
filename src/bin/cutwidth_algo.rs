@@ -38,7 +38,8 @@ fn main() {
 
     // main calls
     for scc in &sccs {
-        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+//        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+        let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
         vec.extend_from_slice(&vec_scc);
     }
 

@@ -532,6 +532,7 @@ pub fn kobayashi_tamaki(
     graph: &Graph,
     crossing_dict: &HashMap<(usize, usize), usize>,
 ) -> Result<Vec<usize>, String> {
+
     if graph.bnodes.len() == 1 {
         let mut vec = Vec::new();
         vec.push(graph.bnodes[0].id);
@@ -750,19 +751,142 @@ pub fn kobayashi_tamaki(
     Ok(solution) // It is a return (see "expressions" in rust)
 }
 
+#[derive(Debug)]
 struct ConstantInfo {
     b: HashMap<usize,usize>,
     a: HashMap<usize,usize>,
+    inv_a: HashMap<usize,usize>,
     pos: HashMap<(usize,usize),usize>,
     mt_sizes: Vec<usize>, 
     lt_crossings: Vec<Vec<usize>>,
     crossing_dict: HashMap<(usize,usize),usize>,
     m: Vec<Vec<usize>>,
+    l: HashMap<usize,Vec<usize>>,
+    first_b: usize,
 }
 
+fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
+
+    let mut h = petgraph::graph::Graph::<usize, usize>::new();
+    
+    // mapping node in h to u balue
+    let mut map: HashMap<usize,usize> = HashMap::new();
+    let mut inv_map: HashMap<usize, petgraph::graph::NodeIndex> = HashMap::new();
+    
+    if constant_info.l[&t].len() > 0 {
+        // node representing all lt
+        let nu = h.add_node(usize::MAX);
+        map.insert(nu.index(),usize::MAX);
+        inv_map.insert(usize::MAX, nu);
+    }
+    
+    // loop over nodes of m[t] to add edges with usize::UMAX (lt nodes)
+    for p in 0..constant_info.mt_sizes[t] {
+       // if m[p] not in the set represented by x
+       if (x >> p) & 1 == 0 {
+           continue;
+       }
+       let u = constant_info.m[t][p];
+       let nu = h.add_node(u);
+       map.insert(nu.index(),u);
+       inv_map.insert(u,nu);
+    
+       for ul in &constant_info.l[&t] {
+           if let Some(c) = constant_info.crossing_dict.get(&(u,*ul)) { 
+               let c2 = constant_info.crossing_dict.get(&(*ul,u)).unwrap();
+               if c < c2 {
+                   let a = *inv_map.get(&usize::MAX).unwrap();
+                   let b = *inv_map.get(&u).unwrap();
+                   if !h.contains_edge(b,a) {
+                       h.add_edge(b,a,1);
+                       break;
+                   }
+               }
+               if c > c2 {
+                   let a = *inv_map.get(&usize::MAX).unwrap();
+                   let b = *inv_map.get(&u).unwrap();
+                   if !h.contains_edge(a,b) {
+                       h.add_edge(a,b,1);
+                       break;
+                   }
+               }
+           }
+       }
+       if *constant_info.inv_a.get(&u).unwrap()>constant_info.first_b {
+           let a = *inv_map.get(&usize::MAX).unwrap();
+           let b = *inv_map.get(&u).unwrap();
+           if !h.contains_edge(a,b) {
+               h.add_edge(a,b,1);
+           }
+       }
+    }
+    
+    // adding edges inside m[t]
+    for p in 0..constant_info.mt_sizes[t] {
+        if (x >> p) & 1 == 0 {
+            continue;
+        }
+        for p2 in 0..constant_info.mt_sizes[t] {
+            if (x >> p2) & 1 == 0 {
+                continue;
+            }
+            if p != p2 {
+                let u = constant_info.m[t][p];
+                let v = constant_info.m[t][p2];
+                let a = *inv_map.get(&u).unwrap();
+                let b = *inv_map.get(&v).unwrap();
+                let c = constant_info.crossing_dict.get(&(u,v));
+                let c2 = constant_info.crossing_dict.get(&(v,u));
+                if c < c2 {
+                    if !h.contains_edge(a,b) {
+                        h.add_edge(a,b,1);
+                    }
+                }
+                if c > c2 {
+                    if !h.contains_edge(b,a) {
+                        h.add_edge(b,a,1);
+                    }
+                }
+            }
+        }
+    }
+    
+    let sccs = tarjan_scc(&h);
+    // then the last scc in topo order (first in sccs) is last
+
+    let mut candidates = 0;
+    
+    // putting vertices in graph
+    for u in sccs[0].clone().into_iter() {
+            let id = map.get(&u.index()).unwrap();
+            if *id != usize::MAX {
+                let p = constant_info.pos.get(&(t,*id)).unwrap();
+                candidates += 1 << p;
+            }
+    }
+    
+    return candidates;
+}
+
+fn turn_pth_bit_off(x: usize, p: usize) -> usize {
+    // ****1### -> ****0### (here p=3)
+    let mut tmp = x >> p; // ****1
+    let mask = tmp << p; // ****1000
+    let tmp2 = x ^ mask; // 00000###
+    tmp = (tmp >> 1) << 1; //****0 removing last bit.
+    let index = (tmp << p) + tmp2; //****0###
+    return index;
+}
+    
 fn opt_num_crossings(t: usize, x: usize, dp_table: &mut HashMap<(usize,usize), usize>, ptr: &mut HashMap<(usize,usize),Vec<usize>>, constant_info: &ConstantInfo) -> usize {
+//    println!("calling on {:?}", (t,x));
     if let Some(value) = dp_table.get(&(t,x)) {
         return *value;
+    }
+
+    if t==0 && x==0 {
+        dp_table.insert((t,x),0);
+        return *dp_table.get(&(t,x)).unwrap();
     }
 
     // if t is b_y for some y
@@ -776,8 +900,8 @@ fn opt_num_crossings(t: usize, x: usize, dp_table: &mut HashMap<(usize,usize), u
         let mut new_x = (tmp << 1) + 1; // ***1
         new_x = (new_x << p) + tmp2; // ***10000+####
 
-        // return to lighten up table a bit
-        return opt_num_crossings(t-1,new_x,dp_table,ptr,constant_info);
+        let opt = opt_num_crossings(t-1,new_x,dp_table,ptr,constant_info);
+        dp_table.insert((t,x),opt);
     }
 
     // if t is a_y for some y
@@ -792,9 +916,18 @@ fn opt_num_crossings(t: usize, x: usize, dp_table: &mut HashMap<(usize,usize), u
             let tmp2 = x ^ mask;
             tmp = tmp << p;
             let new_x = tmp + tmp2;
-            return opt_num_crossings(t-1,new_x,dp_table,ptr,constant_info);
+            let opt = opt_num_crossings(t-1,new_x,dp_table,ptr,constant_info);
+            dp_table.insert((t,x),opt);
 
         } else {
+
+            // RECOMPUTING SCC RULE
+            let candidates = recomputing_scc_rule(t,x,constant_info);
+//                println!("new candidates {:?}", candidates);
+            // end SCC recomputation
+            // END RECOMPUTING SCC RULE
+
+
             let mut best_sc = usize::MAX;
             let mut best_x = usize::MAX;
             for p in 0..constant_info.mt_sizes[t] {
@@ -802,12 +935,12 @@ fn opt_num_crossings(t: usize, x: usize, dp_table: &mut HashMap<(usize,usize), u
                if (x >> p) & 1 == 0 {
                    continue;
                }
+               // if m[p] is not a candidate
+               if (candidates >> p) & 1 == 0 {
+                   continue;
+               }
                // ****1### -> ****0### (here p=3)
-               let mut tmp = x >> p; // ****1
-               let mask = tmp << p; // ****1000
-               let tmp2 = x ^ mask; // 00000###
-               tmp = (tmp >> 1) << 1; //****0 removing last bit.
-               let index = (tmp << p) + tmp2; //****0###
+               let index = turn_pth_bit_off(x,p);
 
                let mut sc: usize = opt_num_crossings(t,index,dp_table,ptr,constant_info);
                sc += constant_info.lt_crossings[t][p];
@@ -816,7 +949,7 @@ fn opt_num_crossings(t: usize, x: usize, dp_table: &mut HashMap<(usize,usize), u
                        continue;
                    }
                    if p != p2 {
-                       sc += constant_info.crossing_dict[&(constant_info.m[t][p2],constant_info.m[t][p])]
+                       sc += constant_info.crossing_dict[&(constant_info.m[t][p2],constant_info.m[t][p])];
                    }
                }
 
@@ -830,10 +963,18 @@ fn opt_num_crossings(t: usize, x: usize, dp_table: &mut HashMap<(usize,usize), u
         } 
     }
 
+//    println!("dp_table {:?}",dp_table);
+//    println!("trying to get {:?}",(t,x));
     return *dp_table.get(&(t,x)).unwrap();
 }
 
 fn backtrace(t : usize, x : usize,  ptr : &HashMap<(usize,usize),Vec<usize>>, constant_info: &ConstantInfo) -> Vec<usize> {
+
+//    println!("backtrace call {:?}", (t,x));
+
+    if t==0 && x==0 {
+        return Vec::new();
+    }
 
     let mut return_value: Vec<usize> = Vec::new();
     
@@ -867,7 +1008,9 @@ fn backtrace(t : usize, x : usize,  ptr : &HashMap<(usize,usize),Vec<usize>>, co
             return_value = backtrace(t-1,new_x,ptr,constant_info);
 
         } else {
+//            println!("trying to get {:?}",(t,x));
             let extension: Vec<usize> = ptr.get(&(t,x)).unwrap().to_vec();
+//            println!("adding {:?}", extension);
             let mut new_set: Vec<usize> = Vec::new();
             for elem in int2vec(x,&constant_info.m[t]) {
                 if !extension.contains(&elem) {
@@ -887,8 +1030,15 @@ pub fn recursive_kt(
     graph: &Graph,
     crossing_dict: &HashMap<(usize, usize), usize>,
 ) -> Result<Vec<usize>, String> {
+    if graph.bnodes.len() == 1 {
+        let mut vec = Vec::new();
+        vec.push(graph.bnodes[0].id);
+        return Ok(vec);
+    }
 
     let ints = nice_interval_repr(graph);
+//    println!("ints {:?}", ints);
+//    println!("crossing_dict {:?}", crossing_dict);
 
     // 2|Y| in the article. we start at 0 here.
     let max_t: usize = 2 * ints.len();
@@ -900,9 +1050,11 @@ pub fn recursive_kt(
         l.entry(t).or_default();
     }
     let mut a: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
+    let mut inv_a: HashMap<usize, usize> = HashMap::new(); // y to t such that t=a_y
     let mut b: HashMap<usize, usize> = HashMap::new(); // t to y such that t=b_y
     for tup in &ints {
         a.insert(tup.1, tup.0);
+        inv_a.insert(tup.0, tup.1);
         b.insert(tup.2, tup.0);
         for t in (tup.1)..(tup.2) {
             // or_default puts an empty vector if t entry does not exist.
@@ -941,22 +1093,36 @@ pub fn recursive_kt(
         }
     }
 
+    // first b
+    let mut first_b: usize = usize::MAX;
+    for b in b.keys() {
+        first_b = std::cmp::min(first_b,*b);
+    }
+
+//    println!("m {:?}",m);
+
     let constant_info = ConstantInfo {
     b: b,
     a: a,
+    inv_a: inv_a,
     pos: pos,
     mt_sizes: mt_sizes, 
     lt_crossings: lt_crossings,
     crossing_dict: crossing_dict.clone(),
     m: m,
+    l: l,
+    first_b: first_b,
     };
+//    println!("constant_info {:?}", constant_info);
+//    println!("m {:?}", constant_info.m);
     
     let mut dp_table: HashMap<(usize,usize), usize> = HashMap::new();
     let mut ptr: HashMap<(usize,usize), Vec<usize>> = HashMap::new();
 
-    let _opt = opt_num_crossings(max_t,0,&mut dp_table,&mut ptr,&constant_info);
+    let _opt = opt_num_crossings(max_t-1,0,&mut dp_table,&mut ptr,&constant_info);
 
-    let ordering = backtrace(max_t, 0,&ptr,&constant_info);
+//    println!("ptr {:?}", ptr);
+    let ordering = backtrace(max_t-1, 0,&ptr,&constant_info);
 
     return Ok(ordering);
 }
