@@ -6,12 +6,6 @@ PACE 2024: https://pacechallenge.org/2024/
 
 Choice of Rust: a short way to describe Rust is that it is similar to C and C++, but with an aggressive, well-designed compiler that forbids you from doing anything dangerous. It is designed to be a replacement of C++. Yet the syntax includes some nice Python-looking stuff. Examples of Rust implementations of a lot of common algorithms: https://github.com/TheAlgorithms/Rust/blob/master/DIRECTORY.md. While it depends on the implementation: Rust is basically as fast as C and C++: https://benchmarksgame-team.pages.debian.net/benchmarksgame/fastest/rust.html
 
-**Status**
-  - implementation of Tamaki-Kobayashi is complete, but inefficient as it is (cache misses ?)
-  - a branch and bound version of Tamaki-Kobayashi would be good to have
-  - could pre-processing rules from feedback arc set be used ?
-  - what is an algorithm parameterized by cut-width ? don't know yet.
-
 The repository follows the standard Rust structure, as created automatically by Cargo.
 The default binary (src/main.rs) solves the problem given a graph. An additional binary (src/bin/interval-visualizer.rs)
 yields a visualization of intervals.
@@ -40,3 +34,14 @@ cargo doc --open
 ```
 
 The documentation is then in target/doc/sherby-pace-2024.
+
+For an actual test of the solvers on the exact data set, you can do:
+```
+cargo build --release
+sudo ./exact_public_exec.sh
+```
+It compiles with optimization flags, and runs the binary on all instances of the exact
+track, with a memory limit of 8GB and a time limit that can be adjusted (in seconds)
+in exact_public_exec.sh
+
+For the cutwidth data set, there is a similar script (cutwidth_public_exec.sh).
