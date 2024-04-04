@@ -1,3 +1,8 @@
+/// Solver for the cutwidth track.
+/// Its only difference with the exact track
+/// solver (main.rs) is the parsing of
+/// the graph, which ignores the ordering
+/// that is given.
 use clap::Parser;
 use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
@@ -38,7 +43,7 @@ fn main() {
 
     // main calls
     for scc in &sccs {
-//        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+        //        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
         let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
         vec.extend_from_slice(&vec_scc);
     }

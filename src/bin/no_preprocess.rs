@@ -1,3 +1,8 @@
+/// For testing purposes, a version of the exact
+/// track solver that does not preprocess anything
+/// (otherwise the preprocessing does all
+/// the work on tiny instances and the actual
+/// algorithm is not tested)
 use ::std::collections::HashMap;
 use clap::Parser;
 use peak_alloc::PeakAlloc;
@@ -13,7 +18,8 @@ fn main() {
 
     let crossing_dict = crossing_values(&graph);
 
-    let vec = kobayashi_tamaki(&graph, &crossing_dict).unwrap();
+    //    let vec = kobayashi_tamaki(&graph, &crossing_dict).unwrap();
+    let vec = recursive_kt(&graph, &crossing_dict).unwrap();
 
     // Writing result in output file (name same as input, extension changed)
     let mut outname = args.graph.clone();
