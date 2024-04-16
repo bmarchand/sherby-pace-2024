@@ -68,6 +68,7 @@ fn test_file_no_preprocess(instance: &str, sol1_name: &str, sol2_name: &str) {
     assert_eq!(sol1, sol2);
 }
 
+
 #[test]
 fn test_cycle_8_shuffled() {
     let mut cmd = Command::cargo_bin("sherby-pace-2024").unwrap();
@@ -94,6 +95,78 @@ fn test_cycle_8_shuffled() {
         .unwrap();
 
     assert_eq!(sol1, sol2);
+}
+
+#[test]
+fn test_low_edges_tiny_test() {
+    test_file(
+        "tests/motif_test_instances/low_edges_tiny_test.gr",
+        "tests/motif_test_instances/low_edges_tiny_test.sol",
+        "tests/motif_test_instances/low_edges_tiny_test.true_sol",
+        );
+}
+
+#[test]
+fn test_high_edges_test() {
+    test_file(
+        "tests/motif_test_instances/high_edges_test.gr",
+        "tests/motif_test_instances/high_edges_test.sol",
+        "tests/motif_test_instances/high_edges_test.true_sol",
+        );
+}
+
+#[test]
+fn test_high_stars_test() {
+    test_file(
+        "tests/motif_test_instances/high_stars_test.gr",
+        "tests/motif_test_instances/high_stars_test.sol",
+        "tests/motif_test_instances/high_stars_test.true_sol",
+        );
+}
+
+#[test]
+fn test_low_edges_test() {
+    test_file(
+        "tests/motif_test_instances/low_edges_test.gr",
+        "tests/motif_test_instances/low_edges_test.sol",
+        "tests/motif_test_instances/low_edges_test.true_sol",
+        );
+}
+
+#[test]
+fn test_low_stars_test() {
+    test_file(
+        "tests/motif_test_instances/low_stars_test.gr",
+        "tests/motif_test_instances/low_stars_test.sol",
+        "tests/motif_test_instances/low_stars_test.true_sol",
+        );
+}
+
+#[test]
+fn test_low_stars_tiny_test() {
+    test_file(
+        "tests/motif_test_instances/low_stars_tiny_test.gr",
+        "tests/motif_test_instances/low_stars_tiny_test.sol",
+        "tests/motif_test_instances/low_stars_tiny_test.true_sol",
+        );
+}
+
+#[test]
+fn test_med_edges_test() {
+    test_file(
+        "tests/motif_test_instances/med_edges_test.gr",
+        "tests/motif_test_instances/med_edges_test.sol",
+        "tests/motif_test_instances/med_edges_test.true_sol",
+        );
+}
+
+#[test]
+fn test_med_stars_test() {
+    test_file(
+        "tests/motif_test_instances/med_stars_test.gr",
+        "tests/motif_test_instances/med_stars_test.sol",
+        "tests/motif_test_instances/med_stars_test.true_sol",
+        );
 }
 
 #[test]
