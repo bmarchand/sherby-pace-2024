@@ -4,6 +4,14 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+use std::fs::File;
+use std::io::Write;
+use std::io::{self,BufRead};
+use std::process::Command;
+use std::path::Path;
+use std::fs;
+
+
 /// The struct (in other languages: class) used
 /// to represent an instance (a bipartite graph
 /// for which the B side has to ordered while
@@ -41,6 +49,13 @@ pub struct BNode {
 pub struct Cli {
     /// The path to the graph
     pub graph: std::path::PathBuf,
+	
+	#[arg(short, long)]
+    pub dfas: bool,
+	
+	#[arg(short, long)]
+    pub random: bool,
+	
 }
 
 /// The same as parse_graph, except that
@@ -400,7 +415,7 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
                     let a = *map.get(&u.id).unwrap();
                     let b = *map.get(&v.id).unwrap();
                     if !h.contains_edge(a, b) {
-                        h.add_edge(a, b, 0);
+                        h.add_edge(a, b, 30000);	//TODO ML: we assume that 30000 is larger than anything
                     }
                 }
             }
@@ -584,6 +599,8 @@ pub fn kobayashi_tamaki(
         vec.push(graph.bnodes[0].id);
         return Ok(vec);
     }
+
+
 
     let ints = nice_interval_repr(graph);
 
@@ -1166,3 +1183,263 @@ pub fn recursive_kt(
 
     return Ok(ordering);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//outs MUST contain an entry for each i in 0..nbnodes
+pub fn write_digraph( nbnodes: usize, outs: &HashMap<usize, HashSet<usize>>, 
+					  arc_weights : &HashMap< (usize, usize), usize>, filename : &String )
+{
+	let mut data_file = File::create(filename).expect("Failed to create file");
+	
+	//line 1 = nb vertices
+	write!(data_file, "{}\n", nbnodes);
+	
+	//other lines = arcs, format "v1 v2 weight", where v1 v2 are vertex numbers, indexed at 1
+	for i in 0 .. nbnodes{
+		for j in &outs[&i]{
+			write!(data_file, "{} {} {}\n", i + 1, j + 1, arc_weights[ &(i, *j) ]);
+		}
+	}
+}
+
+
+
+
+
+
+
+
+//taken from the web
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
+}
+
+
+pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
+{
+	let mut infofilename : String = String::new();
+	infofilename += filename;
+	infofilename += ".info";
+	
+	println!("Calling ./dfas_v2/dfas --in={} --out={}", filename, infofilename);
+	
+	let output = Command::new("./dfas_v2/dfas")
+                     .arg("--in=".to_owned() + &filename)
+					 .arg("--out=".to_owned() + &infofilename)
+                     .output()
+                     .expect("failed to execute process");
+					
+
+	let mut cost : usize = 0;
+	let mut topo_sort : Vec<usize> = Vec::new();
+	
+	if let Ok(lines) = read_lines(infofilename) {
+        // Consumes the iterator, returns an (Optional) String
+        for line in lines.flatten() {
+            
+			//println!("Line = {}", line);
+			
+			let parts : Vec<&str> = line.split("=").collect();
+			
+			if parts.len() >= 2
+			{
+				if parts[0] == "cost"
+				{
+					
+					cost = parts[1].parse::<usize>().unwrap();
+				}
+				else if parts[0] == "topo_sort"
+				{
+					let topo_vertices : Vec<&str> = parts[1].split(" ").collect();
+					
+					for t in topo_vertices
+					{
+						if t != ""
+						{
+							let v : usize = t.parse::<usize>().unwrap();
+							topo_sort.push(v);
+						}
+					}
+				}
+			}
+			
+        }
+    }
+	
+	return (cost, topo_sort);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>, instance_id : usize ) -> (usize, Vec<usize>)
+{
+	//we are essentially rebuilding the digraph from compute_scc, but whatever...
+	//because maxsatsolver wants var names 1,2,...,n, we work with array indices of graph.bnodes instead of id values
+	
+	
+	//compute map of out-neighbors (adjacency list with maps).  
+	//key = index in array of graph.bnodes, value = set of array indices of out-neighbors
+	let mut outs: HashMap<usize, HashSet<usize>> = HashMap::new();
+	let mut arc_weights: HashMap< (usize, usize), usize > = HashMap::new();
+	
+	
+	for i in 0 .. graph.bnodes.len()
+	{
+		let i_id = graph.bnodes[i].id;
+		
+		let mut i_outs : HashSet<usize> = HashSet::new();
+		
+		
+		for j in 0 .. graph.bnodes.len()
+		{
+			let j_id = graph.bnodes[j].id;
+			
+			if let Some(c_ji) = crossing_dict.get(&(j_id, i_id)) {
+				let c_ij = crossing_dict.get(&(i_id, j_id)).unwrap();
+				if *c_ji > *c_ij {
+					//j < i has more crossings than i < j => arc (i, j)
+					i_outs.insert(j);
+					arc_weights.insert( (i, j), *c_ji - *c_ij );
+				}
+			}
+			
+			if !i_outs.contains(&j){
+				//check same condition as compute_scc for when i is forced left of j
+				let u = &graph.bnodes[i];
+				let v = &graph.bnodes[j];
+				if u.right <= v.left && u.left < v.right {
+					i_outs.insert(j);
+					arc_weights.insert( (i, j), 30000);
+				}
+			}
+			
+		}
+		
+		outs.insert(i, i_outs);
+		
+	}
+	
+	
+	//create tmp dir if not exists
+	fs::create_dir_all("./tmp");
+	
+	let mut filename : String = String::new();
+	filename += "tmp/scc";
+	filename +=  instance_id.to_string().as_str();
+	filename += ".gr";
+	
+	write_digraph( graph.bnodes.len(), &outs, &arc_weights, &filename );
+	
+	let (cost, topo_sort) = solve_dfas_from_file( &filename );
+	
+	
+	let mut toposort_bnode_ids : Vec<usize> = Vec::new();
+	
+	for t in &topo_sort{
+		toposort_bnode_ids.push( graph.bnodes[*t].id );
+	}
+	
+	
+	//This checks that the claimed cost is the same as crossing_dict would calculate
+	let mut cost_lb : usize = 0;
+	let mut cost_maxsat : usize = 0;
+	for i in 0 .. toposort_bnode_ids.len()
+	{
+		let id_i = toposort_bnode_ids[i];
+		let bnode_i = &graph.bnodes[ topo_sort[i] ];
+		
+		//for each j before i in topo sort
+		for j in 0 .. i 
+		{
+			let id_j = toposort_bnode_ids[j];
+			let bnode_j = &graph.bnodes[ topo_sort[j] ];
+			
+			//case 1 : i is completely left of j, but got placed after -> should never happen since arc weights are super high
+			//also contribution to lb is 0
+			//condition is copied from h construction
+			if bnode_i.right <= bnode_j.left && bnode_i.left < bnode_j.right
+			{
+				println!("Error: i.right is <= j.left but i after j, i={}  j={}", i, j);
+			}
+			
+			
+			if crossing_dict.contains_key(&(id_i, id_j))
+			{
+				let cost_ij = crossing_dict.get(&(id_i, id_j)).unwrap();
+				let cost_ji = crossing_dict.get(&(id_j, id_i)).unwrap();
+				
+				cost_lb += std::cmp::min(cost_ij, cost_ji);			
+				cost_maxsat += cost_ji;	
+			}
+			
+		}
+	}
+	
+	println!("total cost lb={}  maxsat={}  diff={}", cost_lb, cost_maxsat, cost_maxsat - cost_lb);
+	
+	if cost_maxsat - cost_lb != cost
+	{
+		println!("ERROR: cost_maxsat - cost_lb != cost");
+	}
+	
+	
+	
+	return (cost, toposort_bnode_ids)
+	
+}
+
+
+
+

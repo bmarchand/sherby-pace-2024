@@ -13,6 +13,10 @@ static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 fn main() {
     let args = Cli::parse();
 
+	if args.dfas{
+		println!("dfas mode activated");
+	}
+
     let graph: Graph = parse_graph_cutwidth(&args.graph);
 
     let mut crossing_dict = orientable_crossing_values(&graph);
@@ -42,10 +46,21 @@ fn main() {
     let mut vec: Vec<usize> = Vec::new();
 
     // main calls
+	let mut cptscc : usize = 1;
     for scc in &sccs {
-        //        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
-        let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
-        vec.extend_from_slice(&vec_scc);
+        // let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+        
+		if args.dfas && scc.bnodes.len() > 1{
+			println!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
+			let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict, cptscc );
+			vec.extend_from_slice(&vec_scc);
+		}
+		else{
+			let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
+			vec.extend_from_slice(&vec_scc);
+		}
+		
+		cptscc += 1;
     }
 
     // twins post-processing
