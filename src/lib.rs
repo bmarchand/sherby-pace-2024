@@ -980,9 +980,10 @@ fn opt_num_crossings(
             let opt = opt_num_crossings(t - 1, new_x, dp_table, ptr, constant_info);
             dp_table.insert((t, x), opt);
         } else {
-            // RECOMPUTING SCC RULE
-            let candidates = recomputing_scc_rule(t, x, constant_info);
-            // END RECOMPUTING SCC RULE
+//            // RECOMPUTING SCC RULE
+//            let candidates = recomputing_scc_rule(t, x, constant_info);
+//            // END RECOMPUTING SCC RULE
+            let candidates = x;
 
             let mut best_sc = usize::MAX;
             let mut best_x = usize::MAX;
@@ -1082,6 +1083,43 @@ fn backtrace(
     return return_value;
 }
 
+pub fn total_instance_size(graph: &Graph) -> usize {
+    
+    let ints = nice_interval_repr(graph);
+
+    // 2|Y| in the article. we start at 0 here.
+    let max_t: usize = 2 * ints.len();
+
+    // computing the sets L_t and M_t, recording when t=a_y or t=b_y
+    let mut m: Vec<Vec<usize>> = vec![Vec::new(); max_t]; // t to sorted list of Mt elements
+                                                          //
+    for tup in &ints {
+        for t in (tup.1)..(tup.2) {
+            // or_default puts an empty vector if t entry does not exist.
+            match m[t].binary_search(&tup.0) {
+                Ok(_) => {}
+                Err(position) => m[t].insert(position, tup.0),
+            }
+        }
+    }
+    
+    // Looking at size of largest M_t
+    let mut mt_sizes = Vec::new();
+    //    let mut h: u32 = 0;
+    for t in 0..max_t {
+        let v = &m[t]; //.get(&t).unwrap();
+        mt_sizes.push(v.len());
+        //        h = std::cmp::max(h, v.len() as u32);
+    }
+
+    let mut total_instance_size = 0;
+    for s in &mt_sizes {
+        total_instance_size += 1 << s;
+    }
+    return total_instance_size;
+
+}
+
 /// memoization version of Kobayashi-Tamaki.
 /// The preambule is the same as the iterative
 /// version.
@@ -1157,6 +1195,7 @@ pub fn recursive_kt(
     }
 
     // END PREAMBULE
+    //
 
     let constant_info = ConstantInfo {
         b: b,
@@ -1258,7 +1297,7 @@ pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
 	
 	println!("Calling ./dfas_v2/dfas --in={} --out={}", filename, infofilename);
 	
-	let output = Command::new("./dfas_v2/dfas")
+	let _output = Command::new("./dfas_v2/dfas")
                      .arg("--in=".to_owned() + &filename)
 					 .arg("--out=".to_owned() + &infofilename)
                      .output()

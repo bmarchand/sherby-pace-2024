@@ -48,15 +48,18 @@ fn main() {
     // main calls
 	let mut cptscc : usize = 1;
     for scc in &sccs {
-        // let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+//        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+        //
+                let instance_size = total_instance_size(&scc);
         
-		if args.dfas && scc.bnodes.len() > 1{
+		if instance_size > 10000000 && scc.bnodes.len() > 1{
 			println!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
 			let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict, cptscc );
 			vec.extend_from_slice(&vec_scc);
 		}
 		else{
-			let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
+			//let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
+			let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
 			vec.extend_from_slice(&vec_scc);
 		}
 		
