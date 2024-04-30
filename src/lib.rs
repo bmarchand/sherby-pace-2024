@@ -3,7 +3,7 @@ use petgraph::algo::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 //use std::path::PathBuf;
-use log::info;
+//use log:://info;
 
 use std::fs::File;
 use std::io::Write;
@@ -136,7 +136,7 @@ pub fn parse_graph_cutwidth(file_name: &String) -> Graph {
 
 /// The fuction parsing a file representing a graph.
 /// It simply fills the vectors of A nodes and
-/// B nodes of a Graph struct with the required information
+/// B nodes of a Graph struct with the required //information
 pub fn parse_graph(file_name: &String) -> Graph {
     let content = std::fs::read_to_string(file_name).expect("could not read file");
 
@@ -425,11 +425,11 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
         }
     }
 
-    info!(
-        "h has {:?} edges over {:?} possible",
-        h.edge_count(),
-        h.node_count() * (h.node_count() - 1) / 2
-    );
+    //info!(
+//        "h has {:?} edges over {:?} possible",
+//        h.edge_count(),
+//        h.node_count() * (h.node_count() - 1) / 2
+//    );
 
     let sccs = tarjan_scc(&h);
 
@@ -796,7 +796,7 @@ pub fn kobayashi_tamaki(
     Ok(solution) // It is a return (see "expressions" in rust)
 }
 
-/// The struct containing all the necessary "constant info"
+/// The struct containing all the necessary "constant //info"
 /// that needs to be passed along the recursive calls
 /// in a memoized version of the main algorithm
 /// (Kobayashi-Tamaki). A reference will be passed,
@@ -944,7 +944,7 @@ fn opt_num_crossings(
     ptr: &mut HashMap<(usize, usize), Vec<usize>>,
     constant_info: &ConstantInfo,
 ) -> usize {
-    //    info!("calling on {:?}", (t,x));
+    //    //info!("calling on {:?}", (t,x));
     if let Some(value) = dp_table.get(&(t, x)) {
         return *value;
     }
@@ -1296,9 +1296,9 @@ pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
 {
     let mut infofilename : String = String::new();
     infofilename += filename;
-    infofilename += ".info";
+    infofilename += ".//info";
     
-    info!("Calling ./dfas_v2/dfas --in={} --out={}", filename, infofilename);
+    //info!("Calling ./dfas_v2/dfas --in={} --out={}", filename, //infofilename);
     
     let _output = Command::new("./dfas_v2/dfas")
                      .arg("--in=".to_owned() + &filename)
@@ -1314,7 +1314,7 @@ pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
         // Consumes the iterator, returns an (Optional) String
         for line in lines.flatten() {
             
-            //info!("Line = {}", line);
+            ////info!("Line = {}", line);
             
             let parts : Vec<&str> = line.split("=").collect();
             
@@ -1440,21 +1440,21 @@ pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
     for i in 0 .. toposort_bnode_ids.len()
     {
         let id_i = toposort_bnode_ids[i];
-        let bnode_i = &graph.bnodes[ topo_sort[i] ];
+//        let bnode_i = &graph.bnodes[ topo_sort[i] ];
         
         //for each j before i in topo sort
         for j in 0 .. i 
         {
             let id_j = toposort_bnode_ids[j];
-            let bnode_j = &graph.bnodes[ topo_sort[j] ];
+//            let bnode_j = &graph.bnodes[ topo_sort[j] ];
             
             //case 1 : i is completely left of j, but got placed after -> should never happen since arc weights are super high
             //also contribution to lb is 0
             //condition is copied from h construction
-            if bnode_i.right <= bnode_j.left && bnode_i.left < bnode_j.right
-            {
-                info!("Error: i.right is <= j.left but i after j, i={}  j={}", i, j);
-            }
+//            if bnode_i.right <= bnode_j.left && bnode_i.left < bnode_j.right
+//            {
+//                //info!("Error: i.right is <= j.left but i after j, i={}  j={}", i, j);
+//            }
             
             
             if crossing_dict.contains_key(&(id_i, id_j))
@@ -1469,12 +1469,12 @@ pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
         }
     }
     
-    info!("total cost lb={}  maxsat={}  diff={}", cost_lb, cost_maxsat, cost_maxsat - cost_lb);
+    //info!("total cost lb={}  maxsat={}  diff={}", cost_lb, cost_maxsat, cost_maxsat - cost_lb);
     
-    if cost_maxsat - cost_lb != cost
-    {
-        info!("ERROR: cost_maxsat - cost_lb != cost");
-    }
+//    if cost_maxsat - cost_lb != cost
+//    {
+//        //info!("ERROR: cost_maxsat - cost_lb != cost");
+//    }
     
     
     
