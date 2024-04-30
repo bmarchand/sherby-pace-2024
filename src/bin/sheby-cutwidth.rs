@@ -13,9 +13,9 @@ static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 fn main() {
     let args = Cli::parse();
 
-	if args.dfas{
-		println!("dfas mode activated");
-	}
+    if args.dfas{
+    	println!("dfas mode activated");
+    }
 
     let graph: Graph = parse_graph_cutwidth(&args.graph);
 
