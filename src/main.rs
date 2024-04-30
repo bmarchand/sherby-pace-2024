@@ -1,9 +1,9 @@
 //use clap::Parser;
-use peak_alloc::PeakAlloc;
+//use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 
-#[global_allocator]
-static PEAK_ALLOC: PeakAlloc = PeakAlloc;
+//#[global_allocator]
+//static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
 //    let args = Cli::parse();
@@ -73,6 +73,6 @@ fn main() {
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     let _ = std::fs::write(outname, v.join("\n"));
 
-    let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
-    println!("peak memory: {} mb", peak_mem);
+//    let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
+//    println!("peak memory: {} mb", peak_mem);
 }

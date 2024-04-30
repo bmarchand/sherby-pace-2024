@@ -4,12 +4,12 @@
 /// the graph, which ignores the ordering
 /// that is given.
 //use clap::Parser;
-use peak_alloc::PeakAlloc;
+//use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 //use log::info;
 
-#[global_allocator]
-static PEAK_ALLOC: PeakAlloc = PeakAlloc;
+//#[global_allocator]
+//static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
 //    let args = Cli::parse();
