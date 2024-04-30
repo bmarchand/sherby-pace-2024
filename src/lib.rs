@@ -50,6 +50,8 @@ pub struct BNode {
 pub struct Cli {
     /// The path to the graph
     pub graph: std::path::PathBuf,
+    /// The path to the solution
+    pub solution: std::path::PathBuf,
     
     #[arg(short, long)]
     pub dfas: bool,

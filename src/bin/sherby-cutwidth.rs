@@ -72,8 +72,8 @@ fn main() {
     // end twin post-processing
 
     // Writing result in output file (name same as input, extension changed)
-    let mut outname = args.graph.clone();
-    outname.set_extension("sol");
+    let outname = args.solution.clone();
+//    outname.set_extension("sol");
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     let _ = std::fs::write(outname, v.join("\n"));
 
