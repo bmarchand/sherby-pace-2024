@@ -7,7 +7,3 @@ edition = "2021"
 
 [dependencies]
 petgraph = { path = "external/petgraph/" }
-
-[dev-dependencies]
-assert_cmd = "2.0.13"
-predicates = "3.1.0"
