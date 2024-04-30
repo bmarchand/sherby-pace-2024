@@ -1,4 +1,11 @@
 target/
+dfas_v2/CMakeCache.txt
+dfas_v2/CMakeFiles/
+dfas_v2/Makefile
+dfas_v2/cmake_install.cmake
+dfas_v2/dfas
+tmp/
+*.a
 Cargo.lock
 *.svg
 exact-public-instances/*.sol
