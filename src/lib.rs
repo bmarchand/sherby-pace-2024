@@ -3,6 +3,7 @@ use petgraph::algo::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use log::info;
 
 use std::fs::File;
 use std::io::Write;
@@ -422,7 +423,7 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
         }
     }
 
-    println!(
+    info!(
         "h has {:?} edges over {:?} possible",
         h.edge_count(),
         h.node_count() * (h.node_count() - 1) / 2
@@ -803,14 +804,14 @@ pub fn kobayashi_tamaki(
 struct ConstantInfo {
     b: HashMap<usize, usize>,
     a: HashMap<usize, usize>,
-    inv_a: HashMap<usize, usize>,
+//    inv_a: HashMap<usize, usize>,
     pos: HashMap<(usize, usize), usize>,
     mt_sizes: Vec<usize>,
     lt_crossings: Vec<Vec<usize>>,
     crossing_dict: HashMap<(usize, usize), usize>,
     m: Vec<Vec<usize>>,
-    l: HashMap<usize, Vec<usize>>,
-    first_b: usize,
+//    l: HashMap<usize, Vec<usize>>,
+//    first_b: usize,
 }
 
 /// The function recomputing strongly connected components
@@ -819,107 +820,107 @@ struct ConstantInfo {
 /// last element in an optimal ordering of the sub-instance
 /// associated to (t,x), it is enough to only look
 /// at candidates.
-fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
-    let mut h = petgraph::graph::Graph::<usize, usize>::new();
-
-    // mapping node in h to u balue
-    let mut map: HashMap<usize, usize> = HashMap::new();
-    let mut inv_map: HashMap<usize, petgraph::graph::NodeIndex> = HashMap::new();
-
-    if constant_info.l[&t].len() > 0 {
-        // node representing all lt
-        let nu = h.add_node(usize::MAX);
-        map.insert(nu.index(), usize::MAX);
-        inv_map.insert(usize::MAX, nu);
-    }
-
-    // loop over nodes of m[t] to add edges with usize::UMAX (lt nodes)
-    for p in 0..constant_info.mt_sizes[t] {
-        // if m[p] not in the set represented by x
-        if (x >> p) & 1 == 0 {
-            continue;
-        }
-        let u = constant_info.m[t][p];
-        let nu = h.add_node(u);
-        map.insert(nu.index(), u);
-        inv_map.insert(u, nu);
-
-        for ul in &constant_info.l[&t] {
-            if let Some(c) = constant_info.crossing_dict.get(&(u, *ul)) {
-                let c2 = constant_info.crossing_dict.get(&(*ul, u)).unwrap();
-                if c < c2 {
-                    let a = *inv_map.get(&usize::MAX).unwrap();
-                    let b = *inv_map.get(&u).unwrap();
-                    if !h.contains_edge(b, a) {
-                        h.add_edge(b, a, 1);
-                        break;
-                    }
-                }
-                if c > c2 {
-                    let a = *inv_map.get(&usize::MAX).unwrap();
-                    let b = *inv_map.get(&u).unwrap();
-                    if !h.contains_edge(a, b) {
-                        h.add_edge(a, b, 1);
-                        break;
-                    }
-                }
-            }
-        }
-        if *constant_info.inv_a.get(&u).unwrap() > constant_info.first_b {
-            let a = *inv_map.get(&usize::MAX).unwrap();
-            let b = *inv_map.get(&u).unwrap();
-            if !h.contains_edge(a, b) {
-                h.add_edge(a, b, 1);
-            }
-        }
-    }
-
-    // adding edges inside m[t]
-    for p in 0..constant_info.mt_sizes[t] {
-        if (x >> p) & 1 == 0 {
-            continue;
-        }
-        for p2 in 0..constant_info.mt_sizes[t] {
-            if (x >> p2) & 1 == 0 {
-                continue;
-            }
-            if p != p2 {
-                let u = constant_info.m[t][p];
-                let v = constant_info.m[t][p2];
-                let a = *inv_map.get(&u).unwrap();
-                let b = *inv_map.get(&v).unwrap();
-                let c = constant_info.crossing_dict.get(&(u, v));
-                let c2 = constant_info.crossing_dict.get(&(v, u));
-                if c < c2 {
-                    if !h.contains_edge(a, b) {
-                        h.add_edge(a, b, 1);
-                    }
-                }
-                if c > c2 {
-                    if !h.contains_edge(b, a) {
-                        h.add_edge(b, a, 1);
-                    }
-                }
-            }
-        }
-    }
-
-    let sccs = tarjan_scc(&h);
-    // then the last scc in topo order (first in sccs) is last
-
-    let mut candidates = 0;
-
-    // putting vertices in graph
-    for u in sccs[0].clone().into_iter() {
-        let id = map.get(&u.index()).unwrap();
-        if *id != usize::MAX {
-            let p = constant_info.pos.get(&(t, *id)).unwrap();
-            candidates += 1 << p;
-        }
-    }
-
-    return candidates;
-}
+//fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
+//    let mut h = petgraph::graph::Graph::<usize, usize>::new();
+//
+//    // mapping node in h to u balue
+//    let mut map: HashMap<usize, usize> = HashMap::new();
+//    let mut inv_map: HashMap<usize, petgraph::graph::NodeIndex> = HashMap::new();
+//
+//    if constant_info.l[&t].len() > 0 {
+//        // node representing all lt
+//        let nu = h.add_node(usize::MAX);
+//        map.insert(nu.index(), usize::MAX);
+//        inv_map.insert(usize::MAX, nu);
+//    }
+//
+//    // loop over nodes of m[t] to add edges with usize::UMAX (lt nodes)
+//    for p in 0..constant_info.mt_sizes[t] {
+//        // if m[p] not in the set represented by x
+//        if (x >> p) & 1 == 0 {
+//            continue;
+//        }
+//        let u = constant_info.m[t][p];
+//        let nu = h.add_node(u);
+//        map.insert(nu.index(), u);
+//        inv_map.insert(u, nu);
+//
+//        for ul in &constant_info.l[&t] {
+//            if let Some(c) = constant_info.crossing_dict.get(&(u, *ul)) {
+//                let c2 = constant_info.crossing_dict.get(&(*ul, u)).unwrap();
+//                if c < c2 {
+//                    let a = *inv_map.get(&usize::MAX).unwrap();
+//                    let b = *inv_map.get(&u).unwrap();
+//                    if !h.contains_edge(b, a) {
+//                        h.add_edge(b, a, 1);
+//                        break;
+//                    }
+//                }
+//                if c > c2 {
+//                    let a = *inv_map.get(&usize::MAX).unwrap();
+//                    let b = *inv_map.get(&u).unwrap();
+//                    if !h.contains_edge(a, b) {
+//                        h.add_edge(a, b, 1);
+//                        break;
+//                    }
+//                }
+//            }
+//        }
+//        if *constant_info.inv_a.get(&u).unwrap() > constant_info.first_b {
+//            let a = *inv_map.get(&usize::MAX).unwrap();
+//            let b = *inv_map.get(&u).unwrap();
+//            if !h.contains_edge(a, b) {
+//                h.add_edge(a, b, 1);
+//            }
+//        }
+//    }
+//
+//    // adding edges inside m[t]
+//    for p in 0..constant_info.mt_sizes[t] {
+//        if (x >> p) & 1 == 0 {
+//            continue;
+//        }
+//        for p2 in 0..constant_info.mt_sizes[t] {
+//            if (x >> p2) & 1 == 0 {
+//                continue;
+//            }
+//            if p != p2 {
+//                let u = constant_info.m[t][p];
+//                let v = constant_info.m[t][p2];
+//                let a = *inv_map.get(&u).unwrap();
+//                let b = *inv_map.get(&v).unwrap();
+//                let c = constant_info.crossing_dict.get(&(u, v));
+//                let c2 = constant_info.crossing_dict.get(&(v, u));
+//                if c < c2 {
+//                    if !h.contains_edge(a, b) {
+//                        h.add_edge(a, b, 1);
+//                    }
+//                }
+//                if c > c2 {
+//                    if !h.contains_edge(b, a) {
+//                        h.add_edge(b, a, 1);
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    let sccs = tarjan_scc(&h);
+//    // then the last scc in topo order (first in sccs) is last
+//
+//    let mut candidates = 0;
+//
+//    // putting vertices in graph
+//    for u in sccs[0].clone().into_iter() {
+//        let id = map.get(&u.index()).unwrap();
+//        if *id != usize::MAX {
+//            let p = constant_info.pos.get(&(t, *id)).unwrap();
+//            candidates += 1 << p;
+//        }
+//    }
+//
+//    return candidates;
+//}
 
 /// bit manipulation setting the p-th bit of x to 0.
 fn turn_pth_bit_off(x: usize, p: usize) -> usize {
@@ -941,7 +942,7 @@ fn opt_num_crossings(
     ptr: &mut HashMap<(usize, usize), Vec<usize>>,
     constant_info: &ConstantInfo,
 ) -> usize {
-    //    println!("calling on {:?}", (t,x));
+    //    info!("calling on {:?}", (t,x));
     if let Some(value) = dp_table.get(&(t, x)) {
         return *value;
     }
@@ -1200,14 +1201,14 @@ pub fn recursive_kt(
     let constant_info = ConstantInfo {
         b: b,
         a: a,
-        inv_a: inv_a,
+//        inv_a: inv_a,
         pos: pos,
         mt_sizes: mt_sizes,
         lt_crossings: lt_crossings,
         crossing_dict: crossing_dict.clone(),
         m: m,
-        l: l,
-        first_b: first_b,
+//        l: l,
+//        first_b: first_b,
     };
 
     // init dp table
@@ -1264,12 +1265,12 @@ pub fn write_digraph( nbnodes: usize, outs: &HashMap<usize, HashSet<usize>>,
     let mut data_file = File::create(filename).expect("Failed to create file");
     
     //line 1 = nb vertices
-    write!(data_file, "{}\n", nbnodes);
+    let _ = write!(data_file, "{}\n", nbnodes);
     
     //other lines = arcs, format "v1 v2 weight", where v1 v2 are vertex numbers, indexed at 1
     for i in 0 .. nbnodes{
         for j in &outs[&i]{
-            write!(data_file, "{} {} {}\n", i + 1, j + 1, arc_weights[ &(i, *j) ]);
+            let _ = write!(data_file, "{} {} {}\n", i + 1, j + 1, arc_weights[ &(i, *j) ]);
         }
     }
 }
@@ -1295,7 +1296,7 @@ pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
     infofilename += filename;
     infofilename += ".info";
     
-    println!("Calling ./dfas_v2/dfas --in={} --out={}", filename, infofilename);
+    info!("Calling ./dfas_v2/dfas --in={} --out={}", filename, infofilename);
     
     let _output = Command::new("./dfas_v2/dfas")
                      .arg("--in=".to_owned() + &filename)
@@ -1311,7 +1312,7 @@ pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
         // Consumes the iterator, returns an (Optional) String
         for line in lines.flatten() {
             
-            //println!("Line = {}", line);
+            //info!("Line = {}", line);
             
             let parts : Vec<&str> = line.split("=").collect();
             
@@ -1412,7 +1413,7 @@ pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
     
     
     //create tmp dir if not exists
-    fs::create_dir_all("./tmp");
+    let _ = fs::create_dir_all("./tmp");
     
     let mut filename : String = String::new();
     filename += "tmp/scc";
@@ -1450,7 +1451,7 @@ pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
             //condition is copied from h construction
             if bnode_i.right <= bnode_j.left && bnode_i.left < bnode_j.right
             {
-                println!("Error: i.right is <= j.left but i after j, i={}  j={}", i, j);
+                info!("Error: i.right is <= j.left but i after j, i={}  j={}", i, j);
             }
             
             
@@ -1466,11 +1467,11 @@ pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
         }
     }
     
-    println!("total cost lb={}  maxsat={}  diff={}", cost_lb, cost_maxsat, cost_maxsat - cost_lb);
+    info!("total cost lb={}  maxsat={}  diff={}", cost_lb, cost_maxsat, cost_maxsat - cost_lb);
     
     if cost_maxsat - cost_lb != cost
     {
-        println!("ERROR: cost_maxsat - cost_lb != cost");
+        info!("ERROR: cost_maxsat - cost_lb != cost");
     }
     
     

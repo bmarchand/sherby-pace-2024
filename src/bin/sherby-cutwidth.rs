@@ -6,6 +6,7 @@
 use clap::Parser;
 use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
+use log::info;
 
 #[global_allocator]
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
@@ -14,7 +15,7 @@ fn main() {
     let args = Cli::parse();
 
     if args.dfas{
-    	println!("dfas mode activated");
+    	info!("dfas mode activated");
     }
 
     let graph: Graph = parse_graph_cutwidth(&args.graph);
@@ -23,14 +24,14 @@ fn main() {
 
     // twins pre-processing
     let twin_mapping = find_twins(&graph);
-    println!(
+    info!(
         "{:?} twins out of {:?} vertices",
         twin_mapping.len(),
         graph.bnodes.len()
     );
 
     let graph = process_twins_graph(graph, &twin_mapping);
-    println!(
+    info!(
         "num vertices after twin processing {:?}",
         graph.bnodes.len()
     );
@@ -40,7 +41,7 @@ fn main() {
 
     // scc computations
     let sccs = compute_scc(&graph, &crossing_dict);
-    println!("number of SCCs {:?}", sccs.len());
+    info!("number of SCCs {:?}", sccs.len());
 
     // final solution init
     let mut vec: Vec<usize> = Vec::new();
@@ -53,7 +54,7 @@ fn main() {
                 let instance_size = total_instance_size(&scc);
         
 		if instance_size > 10000000 && scc.bnodes.len() > 1{
-			println!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
+			info!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
 			let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict, cptscc );
 			vec.extend_from_slice(&vec_scc);
 		}
@@ -77,5 +78,5 @@ fn main() {
     let _ = std::fs::write(outname, v.join("\n"));
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
-    println!("peak memory: {} mb", peak_mem);
+    info!("peak memory: {} mb", peak_mem);
 }

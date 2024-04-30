@@ -1,4 +1,9 @@
 target/
+cmake_install.cmake
+Makefile
+CMakeCache.txt
+CMakeFiles/
+sherby-cutwidth
 dfas_v2/CMakeCache.txt
 dfas_v2/CMakeFiles/
 dfas_v2/Makefile
