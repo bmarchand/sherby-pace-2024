@@ -1,8 +1,8 @@
-use clap::Parser;
+//use clap::Parser;
 use petgraph::algo::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::PathBuf;
+//use std::path::PathBuf;
 use log::info;
 
 use std::fs::File;
@@ -46,25 +46,25 @@ pub struct BNode {
     pub right: usize,
 }
 
-#[derive(Parser)]
-pub struct Cli {
-    /// The path to the graph
-    pub graph: std::path::PathBuf,
-    /// The path to the solution
-    pub solution: std::path::PathBuf,
-    
-    #[arg(short, long)]
-    pub dfas: bool,
-    
-    #[arg(short, long)]
-    pub random: bool,
-    
-}
+//#[derive(Parser)]
+//pub struct Cli {
+//    /// The path to the graph
+//    pub graph: std::path::PathBuf,
+//    /// The path to the solution
+//    pub solution: std::path::PathBuf,
+//    
+//    #[arg(short, long)]
+//    pub dfas: bool,
+//    
+//    #[arg(short, long)]
+//    pub random: bool,
+//    
+//}
 
 /// The same as parse_graph, except that
 /// the ordering (i.e. the lines with only one vertex
 /// in the cutwidth instances) is ignored.
-pub fn parse_graph_cutwidth(file_name: &PathBuf) -> Graph {
+pub fn parse_graph_cutwidth(file_name: &String) -> Graph {
     let content = std::fs::read_to_string(file_name).expect("could not read file");
 
     // graph initialization
@@ -137,7 +137,7 @@ pub fn parse_graph_cutwidth(file_name: &PathBuf) -> Graph {
 /// The fuction parsing a file representing a graph.
 /// It simply fills the vectors of A nodes and
 /// B nodes of a Graph struct with the required information
-pub fn parse_graph(file_name: &PathBuf) -> Graph {
+pub fn parse_graph(file_name: &String) -> Graph {
     let content = std::fs::read_to_string(file_name).expect("could not read file");
 
     // graph initialization

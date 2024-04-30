@@ -1,4 +1,4 @@
-use clap::Parser;
+//use clap::Parser;
 use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 
@@ -6,13 +6,15 @@ use sherby_pace_2024::*;
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
-    let args = Cli::parse();
+//    let args = Cli::parse();
 	
-	if args.dfas{
-		println!("dfas mode activated");
-	}
+//	if args.dfas{
+//		println!("dfas mode activated");
+//	}
 
-    let graph: Graph = parse_graph(&args.graph);
+    let graph_name = std::env::args().nth(1).expect("expecting a path to a graph file.");
+    let solution_name = std::env::args().nth(2).expect("expecting a path to a graph file.");
+    let graph: Graph = parse_graph(&graph_name);
 
     let mut crossing_dict = orientable_crossing_values(&graph);
 
@@ -45,7 +47,9 @@ fn main() {
     for scc in &sccs {
         
         
-		if args.dfas && scc.bnodes.len() > 1{
+                let instance_size = total_instance_size(&scc);
+        
+		if instance_size > 10000000 && scc.bnodes.len() > 1{
 			println!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
 			let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict, cptscc );
 			vec.extend_from_slice(&vec_scc);
@@ -64,8 +68,8 @@ fn main() {
     // end twin post-processing
 
     // Writing result in output file (name same as input, extension changed)
-    let mut outname = args.graph.clone();
-    outname.set_extension("sol");
+    let outname = solution_name.clone();
+//    outname.set_extension("sol");
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     let _ = std::fs::write(outname, v.join("\n"));
 

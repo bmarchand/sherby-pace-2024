@@ -3,7 +3,7 @@
 /// solver (main.rs) is the parsing of
 /// the graph, which ignores the ordering
 /// that is given.
-use clap::Parser;
+//use clap::Parser;
 use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 use log::info;
@@ -12,13 +12,15 @@ use log::info;
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
-    let args = Cli::parse();
+//    let args = Cli::parse();
+    let graph_name = std::env::args().nth(1).expect("expecting a path to a graph file.");
+    let solution_name = std::env::args().nth(2).expect("expecting a path to a graph file.");
 
-    if args.dfas{
-    	info!("dfas mode activated");
-    }
+//    if args.dfas{
+//    	info!("dfas mode activated");
+//    }
 
-    let graph: Graph = parse_graph_cutwidth(&args.graph);
+    let graph: Graph = parse_graph_cutwidth(&graph_name);
 
     let mut crossing_dict = orientable_crossing_values(&graph);
 
@@ -72,7 +74,7 @@ fn main() {
     // end twin post-processing
 
     // Writing result in output file (name same as input, extension changed)
-    let outname = args.solution.clone();
+    let outname = solution_name.clone();
 //    outname.set_extension("sol");
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     let _ = std::fs::write(outname, v.join("\n"));
