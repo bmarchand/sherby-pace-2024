@@ -1,16 +1,16 @@
-//use clap::Parser;
+use clap::Parser;
 use sherby_pace_2024::*;
 use std::fs::File;
 use std::io::Write;
 
 fn main() {
-//    let args = Cli::parse();
+    let args = Cli::parse();
 
-    let graph_name = std::env::args().nth(1).expect("expecting a path to a graph file.");
-    let graph: Graph = parse_graph(&graph_name);
+    let graph: Graph = parse_graph(&args.graph);
     println!("graph {:?}", graph);
 
-    let filename = graph_name.clone() + ".svg";
+    let argfile = String::from(args.graph.as_path().display().to_string());
+    let filename = argfile.clone() + ".svg";
     print!("writing to {:?}", filename);
     write_graph_svg(&filename, &graph, true);
 }

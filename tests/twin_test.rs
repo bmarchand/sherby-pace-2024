@@ -1,9 +1,11 @@
 use sherby_pace_2024::*;
-//use std::path::PathBuf;
+use std::path::PathBuf;
 
 #[test]
 fn test_twin_pre_processing() {
-    let graph: Graph = parse_graph(&"tests/twin.gr".to_string());
+    let mut path = PathBuf::new();
+    path.push("tests/twin.gr");
+    let graph: Graph = parse_graph(&path);
 
     let twin_list = find_twins(&graph);
     println!("{:?}", twin_list);
@@ -15,7 +17,9 @@ fn test_twin_pre_processing() {
 
 #[test]
 fn test_twin_pre_processing2() {
-    let graph: Graph = parse_graph(&"tests/twin2.gr".to_string());
+    let mut path = PathBuf::new();
+    path.push("tests/twin2.gr");
+    let graph: Graph = parse_graph(&path);
 
     let twin_list = find_twins(&graph);
     println!("{:?}", twin_list);

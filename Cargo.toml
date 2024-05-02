@@ -6,4 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-petgraph = { path = "external/petgraph/" }
+clap = { version = "4.0", features = ["derive"] }
+clap-stdin = "*"
+peak_alloc = "0.2.0"
+petgraph = "0.6.4"
+log = { version = "0.4", features=["max_level_warn"]}
+
+[dev-dependencies]
+assert_cmd = "2.0.13"
+predicates = "3.1.0"

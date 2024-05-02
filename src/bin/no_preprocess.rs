@@ -4,19 +4,17 @@
 /// the work on tiny instances and the actual
 /// algorithm is not tested)
 use ::std::collections::HashMap;
-//use clap::Parser;
-//use peak_alloc::PeakAlloc;
+use clap::Parser;
+use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 
-//#[global_allocator]
-//static PEAK_ALLOC: PeakAlloc = PeakAlloc;
+#[global_allocator]
+static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
-//    let args = Cli::parse();
+    let args = Cli::parse();
 
-    let graph_name = std::env::args().nth(1).expect("expecting a path to a graph file.");
-    let solution_name = std::env::args().nth(2).expect("expecting a path to a graph file.");
-    let graph: Graph = parse_graph(&graph_name);
+    let graph: Graph = parse_graph(&args.graph.into_inner());
 
     let crossing_dict = crossing_values(&graph);
 
@@ -24,13 +22,13 @@ fn main() {
     let vec = recursive_kt(&graph, &crossing_dict).unwrap();
 
     // Writing result in output file (name same as input, extension changed)
-    let outname = solution_name.clone();
-//    outname.set_extension("no_preprocess_sol");
+    let mut outname = args.solution.into_inner().clone();
+    outname.set_extension("no_preprocess_sol");
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     let _ = std::fs::write(outname, v.join("\n"));
 
-//    let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
-//    println!("peak memory: {} mb", peak_mem);
+    let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
+    println!("peak memory: {} mb", peak_mem);
 }
 
 /// Computation of all crossing values c(u,v) for u,v two

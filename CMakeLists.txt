@@ -3,7 +3,7 @@ project(sherby)
 
 add_custom_target(
     sherby-cutwidth ALL
-    COMMAND cargo --offline build --release
+    COMMAND cargo build --release
     COMMAND cp target/release/sherby-cutwidth . 
 )
 
