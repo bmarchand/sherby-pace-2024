@@ -65,15 +65,18 @@ pub struct Cli {
 /// The same as parse_graph, except that
 /// the ordering (i.e. the lines with only one vertex
 /// in the cutwidth instances) is ignored.
-pub fn parse_graph_cutwidth(file_name: &PathBuf) -> Graph {
-    let content = std::fs::read_to_string(file_name).expect("could not read file");
+pub fn parse_graph_cutwidth() -> Graph {
+//    let content = std::fs::read_to_string(file_name).expect("could not read file");
 
     // graph initialization
     let mut graph: Graph = Default::default();
     let mut n0: usize = 0;
 
+    let stdin = std::io::stdin(); // Compiler on optil.io complains, when we do not put this in a variable first.
     // parsing file
-    for line in content.lines() {
+    for line in stdin.lock().lines() {
+        let line = line.unwrap();
+//    for line in content.lines() {
         if line.starts_with("p") {
             n0 = line
                 .split_whitespace()
@@ -138,15 +141,18 @@ pub fn parse_graph_cutwidth(file_name: &PathBuf) -> Graph {
 /// The fuction parsing a file representing a graph.
 /// It simply fills the vectors of A nodes and
 /// B nodes of a Graph struct with the required information
-pub fn parse_graph(file_name: &PathBuf) -> Graph {
-    let content = std::fs::read_to_string(file_name).expect("could not read file");
+pub fn parse_graph() -> Graph {
+//    let content = std::fs::read_to_string(file_name).expect("could not read file");
 
     // graph initialization
     let mut graph: Graph = Default::default();
     let mut n0: usize = 0;
 
+    let stdin = std::io::stdin(); // Compiler on optil.io complains, when we do not put this in a variable first.
     // parsing file
-    for line in content.lines() {
+    for line in stdin.lock().lines() {
+        let line = line.unwrap();
+//    for line in content.lines() {
         if line.starts_with("p") {
             n0 = line
                 .split_whitespace()

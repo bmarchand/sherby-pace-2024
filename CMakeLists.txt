@@ -3,7 +3,7 @@ project(sherby)
 
 add_custom_target(
     sherby-cutwidth ALL
-    COMMAND cargo build --release
+    COMMAND cargo build --release --target=x86_64-unknown-linux-musl
     COMMAND cp target/release/sherby-cutwidth . 
 )
 

@@ -12,7 +12,7 @@ fn main() {
 		println!("dfas mode activated");
 	}
 
-    let graph: Graph = parse_graph(&args.graph.into_inner());
+    let graph: Graph = parse_graph();
 
     let mut crossing_dict = orientable_crossing_values(&graph);
 
@@ -64,9 +64,12 @@ fn main() {
     // end twin post-processing
 
     // Writing result in output file (name same as input, extension changed)
-    let outname = args.solution.into_inner().clone();
+//    let outname = args.solution.into_inner().clone();
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
-    let _ = std::fs::write(outname, v.join("\n"));
+    for x in v {
+        println!("{:?}",x);
+    }
+//    let _ = std::fs::write(outname, v.join("\n"));
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
     println!("peak memory: {} mb", peak_mem);

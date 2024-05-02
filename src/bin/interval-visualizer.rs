@@ -6,7 +6,7 @@ use std::io::Write;
 fn main() {
     let args = Cli::parse();
 
-    let graph: Graph = parse_graph(&args.graph);
+    let graph: Graph = parse_graph();
     println!("graph {:?}", graph);
 
     let argfile = String::from(args.graph.as_path().display().to_string());

@@ -1,10 +1,10 @@
-use clap::Parser;
+//use clap::Parser;
 use sherby_pace_2024::*;
 
 fn main() {
-    let args = Cli::parse();
+//    let args = Cli::parse();
 
-    let graph: Graph = parse_graph(&args.graph);
+    let graph: Graph = parse_graph();
 
     let mut crossing_dict = orientable_crossing_values(&graph);
 

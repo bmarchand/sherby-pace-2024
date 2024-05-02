@@ -3,7 +3,7 @@
 /// solver (main.rs) is the parsing of
 /// the graph, which ignores the ordering
 /// that is given.
-use clap::Parser;
+//use clap::Parser;
 use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 use log::info;
@@ -12,13 +12,13 @@ use log::info;
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
-    let args = Cli::parse();
+//    let args = Cli::parse();
 
 //    if args.dfas{
 //    	info!("dfas mode activated");
 //    }
 
-    let graph: Graph = parse_graph_cutwidth(&args.graph.into_inner());
+    let graph: Graph = parse_graph_cutwidth();
 
     let mut crossing_dict = orientable_crossing_values(&graph);
 
@@ -73,10 +73,13 @@ fn main() {
     // end twin post-processing
 
     // Writing result in output file (name same as input, extension changed)
-    let outname = args.solution.into_inner().clone();
+//    let outname = args.solution.into_inner().clone();
 //    outname.set_extension("sol");
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
-    let _ = std::fs::write(outname, v.join("\n"));
+//    let _ = std::fs::write(outname, v.join("\n"));
+    for x in v {
+        println!("{:?}",x);
+    }
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
     info!("peak memory: {} mb", peak_mem);

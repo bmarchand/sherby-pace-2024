@@ -4,7 +4,7 @@
 /// the work on tiny instances and the actual
 /// algorithm is not tested)
 use ::std::collections::HashMap;
-use clap::Parser;
+//use clap::Parser;
 use peak_alloc::PeakAlloc;
 use sherby_pace_2024::*;
 
@@ -12,9 +12,9 @@ use sherby_pace_2024::*;
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
-    let args = Cli::parse();
+//    let args = Cli::parse();
 
-    let graph: Graph = parse_graph(&args.graph.into_inner());
+    let graph: Graph = parse_graph();
 
     let crossing_dict = crossing_values(&graph);
 
@@ -22,10 +22,13 @@ fn main() {
     let vec = recursive_kt(&graph, &crossing_dict).unwrap();
 
     // Writing result in output file (name same as input, extension changed)
-    let mut outname = args.solution.into_inner().clone();
-    outname.set_extension("no_preprocess_sol");
+//    let mut outname = args.solution.into_inner().clone();
+//    outname.set_extension("no_preprocess_sol");
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
-    let _ = std::fs::write(outname, v.join("\n"));
+    for x in v {
+        println!("{:?}",x);
+    }
+//    let _ = std::fs::write(outname, v.join("\n"));
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
     println!("peak memory: {} mb", peak_mem);
