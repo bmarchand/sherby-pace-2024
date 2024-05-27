@@ -67,7 +67,7 @@ fn main() {
 //    let outname = args.solution.into_inner().clone();
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     for x in v {
-        println!("{:?}",x);
+        println!("{}",x);
     }
 //    let _ = std::fs::write(outname, v.join("\n"));
 

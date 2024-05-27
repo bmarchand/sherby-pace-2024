@@ -44,14 +44,15 @@ fn main() {
     info!("number of SCCs {:?}", sccs.len());
 
     // final solution init
-    let mut vec: Vec<usize> = Vec::new();
+//    let mut vec: Vec<usize> = Vec::new();
+    let vec = kobayashi_tamaki(&graph, &crossing_dict).unwrap();
 
     // main calls
 //	let mut cptscc : usize = 1;
-    for scc in &sccs {
-        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
-	vec.extend_from_slice(&vec_scc);
-        //
+//    for scc in &sccs {
+//        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+//	vec.extend_from_slice(&vec_scc);
+//        //
 //                let instance_size = total_instance_size(&scc);
 //        
 //		if instance_size > 10000000 && scc.bnodes.len() > 1{
@@ -66,7 +67,7 @@ fn main() {
 //		}
 //		
 //		cptscc += 1;
-    }
+//    }
 
     // twins post-processing
     let vec = add_twins(vec, &twin_mapping);
@@ -78,7 +79,7 @@ fn main() {
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
 //    let _ = std::fs::write(outname, v.join("\n"));
     for x in v {
-        println!("{:?}",x);
+        println!("{}",x);
     }
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();

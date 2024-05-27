@@ -3,8 +3,7 @@ project(sherby)
 
 add_custom_target(
     sherby-cutwidth ALL
-    COMMAND cargo build --release --target=x86_64-unknown-linux-musl
-    COMMAND cp target/release/sherby-cutwidth . 
+    COMMAND cargo build --profile submit --target=x86_64-unknown-linux-musl
 )
 
 add_subdirectory(dfas_v2)

@@ -610,8 +610,6 @@ pub fn kobayashi_tamaki(
         return Ok(vec);
     }
 
-
-
     let ints = nice_interval_repr(graph);
 
     // 2|Y| in the article. we start at 0 here.

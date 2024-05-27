@@ -2,7 +2,7 @@
 
 arr=()
 
-for i in {1..125}; 
+for i in {1..100}; 
 do
     echo "------"
     echo "running on file $i"
@@ -22,7 +22,7 @@ do
     fi
 done
 
-for c in "${fruits[@]}"
+for c in "${arr[@]}"
 do
     echo $c
 done
