@@ -2,11 +2,11 @@
 
 arr=()
 
-for i in {1..100}; 
+for i in {1..125}; 
 do
     echo "------"
     echo "running on file $i"
-    systemd-run --send-sighup --scope -p MemoryLimit=8000M timeout 60 /usr/bin/time -f "exec time: %E (h:m:s)" ./target/release/sherby-cutwidth < cutwidth-public//$i.gr > cutwidth-public//$i.sol
+    systemd-run --send-sighup --scope -p MemoryLimit=8000M timeout 1800 /usr/bin/time -f "exec time: %E (h:m:s)" ./target/release/sherby-cutwidth < cutwidth-public//$i.gr > cutwidth-public//$i.sol
     exit_status=$?
     if [[ $exit_status -eq 124 ]]; then
         echo "TIME OUT"

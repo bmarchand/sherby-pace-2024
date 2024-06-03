@@ -19,7 +19,7 @@ fn test_twin_pre_processing() {
 fn test_twin_pre_processing2() {
     let mut path = PathBuf::new();
     path.push("tests/twin2.gr");
-    let graph: Graph = parse_graph(&path);
+    let graph: Graph = parse_graph();
 
     let twin_list = find_twins(&graph);
     println!("{:?}", twin_list);

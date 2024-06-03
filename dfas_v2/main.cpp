@@ -18,8 +18,6 @@
 
 using namespace std;
 
-
-
 struct pair_hasher
     {
         size_t operator()(const pair<int , int> &x) const{
@@ -93,8 +91,6 @@ public:
         Util::WriteFileContent(filename, strout);
         
     }
-    
-    
     
     
     void to_wcnf( string filename, vector<deque<int>> &cycles )
@@ -469,8 +465,6 @@ public:
         
     }
     
-    
-    
     void bfs_cycles( int startnode, vector< deque<int> > &cycles, int minlen, int maxdepth, int max_nb_cycles = 999999 )
     {
         deque<int> queue;
@@ -493,8 +487,6 @@ public:
             
             if (visited_depths[v] >= maxdepth)
                 continue;
-            
-            
             
             for (int w : outs[v])
             {
@@ -526,9 +518,6 @@ public:
                 }
             }
         }
-        
-        
-        
     }
     
     
@@ -649,24 +638,7 @@ public:
         return false;
         
     }
-    
-    
-    
-    
-    
-    
-
-
 };
-
-
-
-
-
-
-
-
-
 
 int main(int argc, char* argv[])
 {

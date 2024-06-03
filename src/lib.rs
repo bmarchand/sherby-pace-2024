@@ -375,18 +375,10 @@ pub fn orientable_crossing_values(graph: &Graph) -> HashMap<(usize, usize), usiz
     return crossing_dict;
 }
 
-/// Decomposes a graph into its strongly connected components.
-/// The directed graph has the free layer B as its vertices,
-/// and there is an edge u->v if c(u,v) < c(v,u).
-/// Returns a vector of graphs, which can each be treated
-/// separately.
-pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>) -> Vec<Graph> {
-    // just mapping id to bnode to remember it
-    let mut id_to_bnodes: HashMap<usize, &BNode> = HashMap::new();
-    for u in &graph.bnodes {
-        id_to_bnodes.insert(u.id, u);
-    }
-
+fn directed_graph(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
+    ) -> (petgraph::graph::Graph<usize,usize>,
+          HashMap<usize,usize>,
+          HashMap<usize,petgraph::graph::NodeIndex>) {
     // directed graph
     let mut h = petgraph::graph::Graph::<usize, usize>::new();
 
@@ -437,6 +429,166 @@ pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
         h.edge_count(),
         h.node_count() * (h.node_count() - 1) / 2
     );
+
+    return (h,inverse_map,map);
+}
+
+pub fn compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize,usize), usize>) -> Vec<Graph> {
+    
+    // just mapping id to bnode to remember it
+    let mut id_to_bnodes: HashMap<usize, &BNode> = HashMap::new();
+    let mut id_to_pos: HashMap<usize, usize> = HashMap::new();
+    let mut pos_to_id: Vec<usize> = vec![0; graph.bnodes.len()];
+    let mut pos = 0;
+    for u in &graph.bnodes {
+        id_to_bnodes.insert(u.id, u);
+        pos_to_id[pos] = u.id;
+        id_to_pos.insert(u.id,pos);
+        pos += 1;
+    }
+
+    struct TarjanState {
+        index: i32,
+        stack: Vec<usize>,
+        on_stack: Vec<bool>,
+        index_of: Vec<i32>,
+        lowlink_of: Vec<i32>,
+        components: Vec<Vec<usize>>,
+    }
+
+    let mut state = TarjanState {
+        index: 0,
+        stack: Vec::new(),
+        on_stack: vec![false; graph.bnodes.len()],
+        index_of: vec![-1; graph.bnodes.len()],
+        lowlink_of: vec![-1; graph.bnodes.len()],
+        components: Vec::new(),
+    };
+
+    // adjacency
+    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+    let ints = nice_interval_repr(graph);
+
+    let max_t: usize = 2 * ints.len();
+
+    let mut r: HashMap<usize, Vec<usize>> = HashMap::new(); // t to sorted list of Lt elements
+    let mut a: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
+    let mut right_end: HashMap<usize, usize> = HashMap::new(); // y to t such that t=b_y
+
+    // recording a[y]
+    for tup in &ints {
+        adj.entry(id_to_pos[&tup.0]).or_default();
+        a.insert(tup.1,id_to_pos[&tup.0]);
+        right_end.insert(id_to_pos[&tup.0],tup.2);
+    }
+
+    // filling r[t]
+    let mut pos = max_t+1;
+    let mut cur: Vec<usize> = Vec::new();
+    while pos > 0 {
+        r.entry(pos).or_insert(cur.clone());
+        if let Some(y) = a.get(&pos) {
+            cur.push(*y);
+        }
+        pos -= 1;
+    }
+
+    // for intervals that intersect
+    for (u, v) in crossing_dict.keys() {
+        if let Some(c) = crossing_dict.get(&(*v, *u)) {
+            let c2 = crossing_dict.get(&(*u, *v)).unwrap();
+            if *c > *c2 {
+                match adj[&id_to_pos[u]].binary_search(v) {
+                    Ok(_) => {}
+                    Err(_) => adj.entry(id_to_pos[u]).or_insert_with(Vec::new).push(id_to_pos[v]),
+                }
+            } else if *c < *c2 {
+                match adj[&id_to_pos[v]].binary_search(u) {
+                    Ok(_) => {}
+                    Err(_) => adj.entry(id_to_pos[v]).or_insert_with(Vec::new).push(id_to_pos[u]),
+                }
+            }
+        }
+    }
+
+    fn strong_connect(v: usize, adj: &HashMap<usize,Vec<usize>>, r: &HashMap<usize,Vec<usize>>, right_end: &HashMap<usize,usize>, state: &mut TarjanState) {
+        state.index_of[v] = state.index;
+        state.lowlink_of[v] = state.index;
+        state.index += 1;
+        state.stack.push(v);
+        state.on_stack[v] = true;
+
+        for &w in &adj[&v] {
+            if state.index_of[w] == -1 {
+                strong_connect(w, adj, r, right_end, state);
+                state.lowlink_of[v] = state.lowlink_of[v].min(state.lowlink_of[w]);
+            } else if state.on_stack[w] {
+                state.lowlink_of[v] = state.lowlink_of[v].min(state.index_of[w]);
+            }
+        }
+
+        for &w in &r[&right_end[&v]] {
+            if state.index_of[w] == -1 {
+                strong_connect(w, adj, r, right_end, state);
+                state.lowlink_of[v] = state.lowlink_of[v].min(state.lowlink_of[w]);
+            } else if state.on_stack[w] {
+                state.lowlink_of[v] = state.lowlink_of[v].min(state.index_of[w]);
+            }
+        }
+
+        if state.lowlink_of[v] == state.index_of[v] {
+            let mut component: Vec<usize> = Vec::new();
+            while let Some(w) = state.stack.pop() {
+                state.on_stack[w] = false;
+                component.push(w);
+                if w == v {
+                    break;
+                }
+            }
+            state.components.push(component);
+        }
+    }
+
+    for v in &ints {
+        if state.index_of[id_to_pos[&v.0]] == -1 {
+            strong_connect(id_to_pos[&v.0], &adj, &r, &right_end, &mut state);
+        }
+    }
+    
+    let mut graph_vec: Vec<Graph> = Vec::new();
+    for scc in &state.components {
+        let mut graph_scc: Graph = Default::default();
+        for u in scc {
+            let bnode = *id_to_bnodes.get(&pos_to_id[*u]).unwrap();
+            graph_scc.bnodes.push(BNode {
+                id: bnode.id,
+                left: bnode.left,
+                right: bnode.right,
+                neighbors: bnode.neighbors.clone(),
+                ..Default::default()
+            });
+        }
+        graph_vec.push(graph_scc);
+    }
+    graph_vec.reverse();
+
+    return graph_vec;
+
+}
+
+/// Decomposes a graph into its strongly connected components.
+/// The directed graph has the free layer B as its vertices,
+/// and there is an edge u->v if c(u,v) < c(v,u).
+/// Returns a vector of graphs, which can each be treated
+/// separately.
+pub fn petgraph_compute_scc(graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>) -> Vec<Graph> {
+    // just mapping id to bnode to remember it
+    let mut id_to_bnodes: HashMap<usize, &BNode> = HashMap::new();
+    for u in &graph.bnodes {
+        id_to_bnodes.insert(u.id, u);
+    }
+
+    let (h,inverse_map,_map) = directed_graph(&graph, &crossing_dict);
 
     let sccs = tarjan_scc(&h);
 
@@ -763,6 +915,8 @@ pub fn kobayashi_tamaki(
             }
         }
     }
+
+//    println!("OPT {:?}", vec_b[0]);
 
     // reconstructing solution
     let mut solution = Vec::new();
@@ -1487,6 +1641,74 @@ pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
     
 }
 
+//fn get_cycles_whose_min_is_u(
+//        graph: &petgraph::graph::Graph<usize,usize>,
+//        inverse_map: &HashMap<usize, usize>,
+//        map: &HashMap<usize, petgraph::graph::NodeIndex>,
+//        max_length: usize,
+//        u: usize
+//    ) -> Vec<Vec<usize>>
+//{
+//    let mut queue: Vec<(usize,usize)> = vec![(u,0)];
+//    let mut visited: HashSet<usize> = HashSet::new();
+//    let mut coming_from: HashMap<usize,usize> = HashMap::new();
+//    let mut cycle_list: Vec<Vec<usize>> = Vec::new();
+//
+//    while queue.len() > 0 {
+//        let (v, l) = queue.pop().unwrap();
+//        if l > max_length {
+//            continue;
+//        }
+//        if l > 0 && v==u {
+//            let mut cyc: Vec<usize> = vec![v];
+//            let mut cur = v;
+//            while cur != u {
+//                cur = coming_from[&cur];
+//                cyc.push(cur);
+//            }
+//            cycle_list.push(cyc);
+//        }
+//        
+//        for w in graph.neighbors(map[&v]) {
+//            let w_int = inverse_map[&w.index()];
+//            if inverse_map[&w_int] >= u && !visited.contains(&u) {
+//                coming_from.insert(w_int, v);
+//                visited.insert(w_int);
+//                queue.push((w_int,l+1));
+//            }
+//        }
+//    }
+//    
+//    return cycle_list;
+//}
+//
+//fn get_cycles(
+//        graph: &petgraph::graph::Graph<usize,usize>,
+//        inverse_map: &HashMap<usize, usize>,
+//        map: &HashMap<usize, petgraph::graph::NodeIndex>,
+//        max_length: usize
+//    ) -> Vec<Vec<usize>> {
+//
+//    let mut cycle_list: Vec<Vec<usize>> = Vec::new();
+//
+//    for u in graph.node_indices() {
+//        for cyc in get_cycles_whose_min_is_u(&graph, &inverse_map, &map, max_length, inverse_map[&u.index()]) {
+//            cycle_list.push(cyc);
+//        }
+//    }
+//
+//    return cycle_list;
+//}
 
-
-
+//pub fn solve_dfas_rust(
+//    graph: &Graph,
+//    crossing_dict: &HashMap<(usize, usize), usize>,
+//    ) -> Vec<usize> {
+//    
+//    let mut max_l = 3;
+//
+//    let (h,inverse_map) = directed_graph(&graph, &crossing_dict);
+//
+//     
+//
+//}

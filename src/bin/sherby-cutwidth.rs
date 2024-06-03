@@ -12,11 +12,6 @@ use log::info;
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
-//    let args = Cli::parse();
-
-//    if args.dfas{
-//    	info!("dfas mode activated");
-//    }
 
     let graph: Graph = parse_graph_cutwidth();
 
@@ -44,18 +39,20 @@ fn main() {
     info!("number of SCCs {:?}", sccs.len());
 
     // final solution init
-//    let mut vec: Vec<usize> = Vec::new();
-    let vec = kobayashi_tamaki(&graph, &crossing_dict).unwrap();
+    let mut vec: Vec<usize> = Vec::new();
+//    let vec = kobayashi_tamaki(&graph, &crossing_dict).unwrap();
 
     // main calls
-//	let mut cptscc : usize = 1;
-//    for scc in &sccs {
-//        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
-//	vec.extend_from_slice(&vec_scc);
-//        //
+//    let mut cptscc : usize = 1;
+    for scc in &sccs {
+        let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+	vec.extend_from_slice(&vec_scc);
+        //
 //                let instance_size = total_instance_size(&scc);
-//        
+//                info!("instance size {:?}",instance_size);
+        
 //		if instance_size > 10000000 && scc.bnodes.len() > 1{
+////                    info!("calling sat solver");
 //			info!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
 //			let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict, cptscc );
 //			vec.extend_from_slice(&vec_scc);
@@ -65,9 +62,9 @@ fn main() {
 //			let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
 //			vec.extend_from_slice(&vec_scc);
 //		}
-//		
+		
 //		cptscc += 1;
-//    }
+    }
 
     // twins post-processing
     let vec = add_twins(vec, &twin_mapping);

@@ -6,7 +6,7 @@ for i in {1..100};
 do
     echo "------"
     echo "running on file $i"
-    systemd-run --send-sighup --scope -p MemoryLimit=8000M timeout 30 /usr/bin/time -f "exec time: %E (h:m:s)" ./target/release/sherby-pace-2024 exact-public-instances/$i.gr
+    systemd-run --send-sighup --scope -p MemoryLimit=8000M timeout 120 /usr/bin/time -f "exec time: %E (h:m:s)" ./target/release/sherby-pace-2024 < exact-public-instances/$i.gr >  exact-public-instances/$i.sol
     exit_status=$?
     if [[ $exit_status -eq 124 ]]; then
         echo "TIME OUT"
