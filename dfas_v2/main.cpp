@@ -135,6 +135,51 @@ public:
         
     }
     
+    void read_graph_lines(string filelines) {
+
+        vector<string> unfilteredLines = Util::Split(filelines, "\n");
+
+        vector<string> lines;
+        for (int i = 0; i < unfilteredLines.size(); i++)
+        {
+            if (unfilteredLines[i] != "")
+                lines.push_back(unfilteredLines[i]);
+        }
+        
+        //first line should have 
+        //nbnodes nbarcs
+        vector<string> px = Util::Split(lines[0], " ", false);
+        
+        nb_nodes = Util::ToInt(px[0]);
+        
+        cout<<"nbnodes="<<nb_nodes<<endl;
+        
+        //we assume node indices are indexed at 1 (ie first node has index 1, not 0)
+        ins.resize(nb_nodes);
+        outs.resize(nb_nodes);
+        
+        for (int l = 1; l < lines.size(); ++l)
+        {
+            string line = lines[l];
+            if (line != "")
+            {
+                vector<string> pz = Util::Split(line, " ", false);
+                
+                //NOTE: we assume node ids in the file are indexed at 1, not 0
+                pair<int, int> e = make_pair( Util::ToInt(pz[0]) - 1, Util::ToInt(pz[1]) - 1 );
+                
+                outs[e.first].insert(e.second);
+                ins[e.second].insert(e.first);
+                    
+                all_edges.push_back( e );
+                edge_indexes[ e ] = all_edges.size() - 1;
+                
+                edge_weights.push_back( Util::ToInt(pz[2]) );
+            }
+        }
+
+
+    }
     
     
     void read_graph( string filename )
@@ -639,6 +684,24 @@ public:
         
     }
 };
+
+string solve_instance(string infilelines) {
+
+    Digraph g;
+    g.read_graph_lines(infilelines);
+    g.solve_fas();
+        
+    vector<int> topo_sort;
+    g.get_topo_sort(topo_sort);
+
+    string strout = "";
+    for (int v : topo_sort)
+    {
+        strout += Util::ToString(v) + " ";
+    }
+
+    return strout;
+}
 
 int main(int argc, char* argv[])
 {

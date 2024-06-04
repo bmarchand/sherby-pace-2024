@@ -497,14 +497,6 @@ public:
         return v3;
     }
 
-
-
-
-
-
-
-
-
 };
 
 #endif // UTIL_H
