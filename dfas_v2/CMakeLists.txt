@@ -18,7 +18,7 @@ endif()
 
 set(MYAPP_PGO "")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -Wall -O3 -march=native")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -lz -lm -Wall -O3 -static -march=native")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -lz -lm -Wall -O3 -static -march=x86-64")
 
 set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_BUILD_TYPE Debug)

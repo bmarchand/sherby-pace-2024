@@ -52,7 +52,7 @@ fn main() {
                 info!("instance size {:?}",instance_size);
       
 		if instance_size > 10000000 && scc.bnodes.len() > 1{
-                        println!("calling sat solver");
+//                        println!("calling sat solver");
 			info!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
 			let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict, cptscc );
 			vec.extend_from_slice(&vec_scc);
