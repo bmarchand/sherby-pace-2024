@@ -18,7 +18,7 @@ endif()
 
 set(MYAPP_PGO "")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -Wall -O3 -march=native")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -lz -lm -Wall -O3 -march=native")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -lz -lm -Wall -O3 -static -march=native")
 
 set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_BUILD_TYPE Debug)
@@ -36,7 +36,6 @@ include_directories(EvalMaxSAT/lib/EvalMaxSAT/src)
 include_directories(EvalMaxSAT/lib/MaLib/src)
 include_directories(EvalMaxSAT/lib/glucose/src)
 
-add_library(dfas_lib SHARED main.cpp)
 add_executable(dfas main.cpp)
 #target_link_libraries (dfas LINK_PUBLIC glucose MaLib EvalMaxSAT)
 target_link_libraries (dfas LINK_PUBLIC glucose MaLib EvalMaxSAT)

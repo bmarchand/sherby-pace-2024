@@ -1,3 +1,4 @@
+use tempfile::NamedTempFile;
 use clap::Parser;
 use clap_stdin::MaybeStdin;
 use petgraph::algo::*;
@@ -1421,17 +1422,17 @@ pub fn recursive_kt(
 
 //outs MUST contain an entry for each i in 0..nbnodes
 pub fn write_digraph( nbnodes: usize, outs: &HashMap<usize, HashSet<usize>>, 
-                      arc_weights : &HashMap< (usize, usize), usize>, filename : &String )
+                      arc_weights : &HashMap< (usize, usize), usize>, mut inputfile : &NamedTempFile)
 {
-    let mut data_file = File::create(filename).expect("Failed to create file");
+//    let mut data_file = File::create(filename).expect("Failed to create file");
     
     //line 1 = nb vertices
-    let _ = write!(data_file, "{}\n", nbnodes);
+    let _ = write!(inputfile, "{}\n", nbnodes);
     
     //other lines = arcs, format "v1 v2 weight", where v1 v2 are vertex numbers, indexed at 1
     for i in 0 .. nbnodes{
         for j in &outs[&i]{
-            let _ = write!(data_file, "{} {} {}\n", i + 1, j + 1, arc_weights[ &(i, *j) ]);
+            let _ = write!(inputfile, "{} {} {}\n", i + 1, j + 1, arc_weights[ &(i, *j) ]);
         }
     }
 }
@@ -1451,17 +1452,18 @@ where P: AsRef<Path>, {
 }
 
 
-pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
+pub fn solve_dfas_from_file( inputfile : &NamedTempFile ) -> ( usize, Vec<usize> )
 {
-    let mut infofilename : String = String::new();
-    infofilename += filename;
-    infofilename += ".info";
+//    let mut infofilename : String = String::new();
+//    infofilename += inputfile.path().to_str().unwrap();
+//    infofilename += ".info";
+    let outfile = NamedTempFile::new().expect("could not create file");
     
-    info!("Calling ./dfas_v2/dfas --in={} --out={}", filename, infofilename);
+    //info!("Calling ./dfas_v2/dfas --in={} --out={}", inputfile.path().to_str(), infofilename);
     
     let _output = Command::new("./dfas_v2/dfas")
-                     .arg("--in=".to_owned() + &filename)
-                     .arg("--out=".to_owned() + &infofilename)
+                     .arg("--in=".to_owned() + &inputfile.path().to_str().unwrap())
+                     .arg("--out=".to_owned() + &outfile.path().to_str().unwrap())
                      .output()
                      .expect("failed to execute process");
                     
@@ -1469,9 +1471,9 @@ pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
     let mut cost : usize = 0;
     let mut topo_sort : Vec<usize> = Vec::new();
     
-    if let Ok(lines) = read_lines(infofilename) {
+//    if let Ok(lines) = read_lines(infofilename) {
         // Consumes the iterator, returns an (Optional) String
-        for line in lines.flatten() {
+        for line in io::BufReader::new(outfile).lines().flatten() {
             
             //info!("Line = {}", line);
             
@@ -1500,7 +1502,7 @@ pub fn solve_dfas_from_file( filename : &String ) -> ( usize, Vec<usize> )
             }
             
         }
-    }
+//    }
     
     return (cost, topo_sort);
 }
@@ -1574,16 +1576,17 @@ pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>
     
     
     //create tmp dir if not exists
-    let _ = fs::create_dir_all("./tmp");
+//    let _ = fs::create_dir_all("./tmp");
+    let input_file = NamedTempFile::new().expect("could not create file");
     
-    let mut filename : String = String::new();
-    filename += "tmp/scc";
-    filename +=  instance_id.to_string().as_str();
-    filename += ".gr";
+//    let mut filename : String = String::new();
+//    filename += "tmp/scc";
+//    filename +=  instance_id.to_string().as_str();
+//    filename += ".gr";
     
-    write_digraph( graph.bnodes.len(), &outs, &arc_weights, &filename );
+    write_digraph( graph.bnodes.len(), &outs, &arc_weights, &input_file );
     
-    let (cost, topo_sort) = solve_dfas_from_file( &filename );
+    let (cost, topo_sort) = solve_dfas_from_file( &input_file );
     
     
     let mut toposort_bnode_ids : Vec<usize> = Vec::new();
