@@ -7,11 +7,9 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use log::info;
 
-use std::fs::File;
 use std::io::Write;
 use std::io::{self,BufRead};
 use std::process::Command;
-use std::path::Path;
 
 
 /// The struct (in other languages: class) used
@@ -756,9 +754,11 @@ pub fn kobayashi_tamaki(
     graph: &Graph,
     crossing_dict: &HashMap<(usize, usize), usize>,
 ) -> Result<Vec<usize>, String> {
-    if graph.bnodes.len() == 1 {
+    if graph.bnodes.len() < 1 {
         let mut vec = Vec::new();
-        vec.push(graph.bnodes[0].id);
+        for i in 0..graph.bnodes.len() {
+            vec.push(graph.bnodes[i].id);
+        }
         return Ok(vec);
     }
 
@@ -994,37 +994,37 @@ fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usi
     }
 
     let p = constant_info.mt_sizes[t];
-    let L = constant_info.l[&t].len();
+    let lsize = constant_info.l[&t].len();
 
     let mut state = TarjanState {
         index: 0,
         stack: Vec::new(),
-        on_stack: vec![false; p+L],
-        index_of: vec![-1; p+L],
-        lowlink_of: vec![-1; p+L],
+        on_stack: vec![false; p+lsize],
+        index_of: vec![-1; p+lsize],
+        lowlink_of: vec![-1; p+lsize],
         components: Vec::new(),
     };
 
-    let mut S: Vec<usize> = Vec::new();
+    let mut subset: Vec<usize> = Vec::new();
     for k in 0..p {
         if (x >> k) & 1 == 1 {
-            S.push(k);
+            subset.push(k);
         }
     }
 
     // adjacency
     let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
-    for k in &S {
+    for k in &subset {
         adj.entry(*k).or_insert_with(Vec::new);
     }
-    for k in 0..L {
+    for k in 0..lsize {
         adj.entry(p+k).or_insert_with(Vec::new);
     }
 
 
     // with lt aggregate
     for (l,u) in constant_info.l[&t].iter().enumerate() {
-        for k in &S {
+        for k in &subset {
             let v = constant_info.m[t][*k];
             if let Some(c) = constant_info.crossing_dict.get(&(v, *u)) {
                 let c2 = constant_info.crossing_dict.get(&(*u, v)).unwrap();
@@ -1053,8 +1053,8 @@ fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usi
     }
 
     // within S
-    for k in &S {
-        for l in &S {
+    for k in &subset {
+        for l in &subset {
             if k != l {
                 let u = constant_info.m[t][*k];
                 let v = constant_info.m[t][*l];
@@ -1107,7 +1107,7 @@ fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usi
         }
     }
 
-    for v in S {
+    for v in subset {
         if state.index_of[v] == -1 {
             strong_connect(v, &adj, &mut state);
         }
@@ -1129,62 +1129,62 @@ fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usi
     return candidates;
 }
 
-fn triangle_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
-
-    let p = constant_info.mt_sizes[t];
-    let mut candidates = x;
-    
-    let mut S: Vec<usize> = Vec::new();
-    for k in 0..p {
-        if (x >> k) & 1 == 1 {
-            S.push(k);
-        }
-    }
-
-    let mut edge_list: Vec<(usize,usize)> = Vec::new();
-    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
-    for k in &S {
-        adj.entry(*k).or_insert_with(Vec::new);
-    }
-    let mut weight: HashMap<(usize,usize), usize> = HashMap::new();
-    // within S
-    for k in &S {
-        for l in &S {
-            if k != l {
-                let u = constant_info.m[t][*k];
-                let v = constant_info.m[t][*l];
-                if let Some(c) = constant_info.crossing_dict.get(&(u, v)) {
-                    edge_list.push((*k,*l));
-                    match adj[&k].binary_search(&l) {
-                        Ok(_) => {}
-                        Err(_) => adj.entry(*k).or_insert_with(Vec::new).push(*l),
-                    }
-                    weight.insert((*k,*l),*c);
-                }
-            }
-        }
-    }
-    println!("adj {:?}", adj);
-
-    for (k,l) in edge_list {
-        let mut vec_x: Vec<usize> = Vec::new();
-        for x in &adj[&l] {
-            match adj[&x].binary_search(&k) {
-                Ok(_) => vec_x.push(*x),
-                Err(_) => {},
-            }
-        }
-        let mut sum = 0;
-        for x in vec_x {
-            sum += std::cmp::min(weight[&(x,k)],weight[&(l,x)]);
-        }
-        println!("sum weight {:?} {:?}", sum,weight[&(k,l)]);
-        if sum > weight[&(k,l)] {
-            candidates = turn_pth_bit_off(candidates, l);
-        }
-    }
-    return candidates;
-}
+//fn triangle_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
+//
+//    let p = constant_info.mt_sizes[t];
+//    let mut candidates = x;
+//    
+//    let mut S: Vec<usize> = Vec::new();
+//    for k in 0..p {
+//        if (x >> k) & 1 == 1 {
+//            S.push(k);
+//        }
+//    }
+//
+//    let mut edge_list: Vec<(usize,usize)> = Vec::new();
+//    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+//    for k in &S {
+//        adj.entry(*k).or_insert_with(Vec::new);
+//    }
+//    let mut weight: HashMap<(usize,usize), usize> = HashMap::new();
+//    // within S
+//    for k in &S {
+//        for l in &S {
+//            if k != l {
+//                let u = constant_info.m[t][*k];
+//                let v = constant_info.m[t][*l];
+//                if let Some(c) = constant_info.crossing_dict.get(&(u, v)) {
+//                    edge_list.push((*k,*l));
+//                    match adj[&k].binary_search(&l) {
+//                        Ok(_) => {}
+//                        Err(_) => adj.entry(*k).or_insert_with(Vec::new).push(*l),
+//                    }
+//                    weight.insert((*k,*l),*c);
+//                }
+//            }
+//        }
+//    }
+//    println!("adj {:?}", adj);
+//
+//    for (k,l) in edge_list {
+//        let mut vec_x: Vec<usize> = Vec::new();
+//        for x in &adj[&l] {
+//            match adj[&x].binary_search(&k) {
+//                Ok(_) => vec_x.push(*x),
+//                Err(_) => {},
+//            }
+//        }
+//        let mut sum = 0;
+//        for x in vec_x {
+//            sum += std::cmp::min(weight[&(x,k)],weight[&(l,x)]);
+//        }
+//        println!("sum weight {:?} {:?}", sum,weight[&(k,l)]);
+//        if sum > weight[&(k,l)] {
+//            candidates = turn_pth_bit_off(candidates, l);
+//        }
+//    }
+//    return candidates;
+//}
 
 /// bit manipulation setting the p-th bit of x to 0.
 fn turn_pth_bit_off(x: usize, p: usize) -> usize {
@@ -1246,7 +1246,7 @@ fn opt_num_crossings(
             dp_table.insert((t, x), opt);
         } else {
 //          
-            let candidates = x;
+            let mut candidates = x;
             let mut hamming_weight = 0;
             for p in 0..constant_info.mt_sizes[t] {
                 // if m[p] not in the set represented by x
@@ -1259,13 +1259,8 @@ fn opt_num_crossings(
             if hamming_weight > 15 {
 //                println!("CALLING RECOMPUTE");
 
-                let candidates = recomputing_scc_rule(t, x, constant_info);
+                candidates = recomputing_scc_rule(t, x, constant_info);
 
-//                println!("CALLING TRIANGLE");
-//                let candidates = triangle_rule(t,candidates,constant_info);
-//                if candidates != x {
-//                    println!("reduced! {:?} {:?}", candidates, x);
-//                }
             }
 //            // END RECOMPUTING SCC RULE
 
@@ -1568,12 +1563,12 @@ pub fn write_digraph( nbnodes: usize, outs: &HashMap<usize, HashSet<usize>>,
 
 
 
-//taken from the web
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
-}
+////taken from the web
+//fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+//where P: AsRef<Path>, {
+//    let file = File::open(filename)?;
+//    Ok(io::BufReader::new(file).lines())
+//}
 
 
 pub fn solve_dfas_from_file( inputfile : &NamedTempFile ) -> ( usize, Vec<usize> )
@@ -1650,7 +1645,7 @@ pub fn solve_dfas_from_file( inputfile : &NamedTempFile ) -> ( usize, Vec<usize>
 
 
 
-pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>, instance_id : usize ) -> (usize, Vec<usize>)
+pub fn solve_dfas( graph: &Graph, crossing_dict: &HashMap<(usize, usize), usize>) -> (usize, Vec<usize>)
 {
     //we are essentially rebuilding the digraph from compute_scc, but whatever...
     //because maxsatsolver wants var names 1,2,...,n, we work with array indices of graph.bnodes instead of id values

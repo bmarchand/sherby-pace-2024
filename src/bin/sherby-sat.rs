@@ -6,6 +6,7 @@ use sherby_pace_2024::*;
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 fn main() {
+
     let graph: Graph = parse_graph();
 
     let mut crossing_dict = orientable_crossing_values(&graph);
@@ -35,25 +36,9 @@ fn main() {
     let mut vec: Vec<usize> = Vec::new();
 
     // main calls
-    let mut cptscc = 0;
     for scc in &sccs {
-        let instance_size = total_instance_size(&scc);
-//        println!("instance size {:?}",instance_size);
-        
-	if instance_size > 10000000 && scc.bnodes.len() > 1{
-	//if args.dfas && scc.bnodes.len() > 1{
-//                println!("calling SAT solver");
-		info!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
-		let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict);
-		vec.extend_from_slice(&vec_scc);
-	}
-	else{
-		let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
-		//let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
-		vec.extend_from_slice(&vec_scc);
-	}
-	
-	cptscc += 1;
+	let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict);
+        vec.extend_from_slice(&vec_scc);
     }
 
     // twins post-processing

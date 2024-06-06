@@ -18,8 +18,8 @@ fn main() {
 
     let crossing_dict = crossing_values(&graph);
 
-    //    let vec = kobayashi_tamaki(&graph, &crossing_dict).unwrap();
-    let vec = recursive_kt(&graph, &crossing_dict).unwrap();
+    let vec = kobayashi_tamaki(&graph, &crossing_dict).unwrap();
+//    let vec = recursive_kt(&graph, &crossing_dict).unwrap();
 
     // Writing result in output file (name same as input, extension changed)
 //    let mut outname = args.solution.into_inner().clone();

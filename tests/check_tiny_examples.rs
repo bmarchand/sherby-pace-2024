@@ -6,7 +6,7 @@ use std::process::Command;
 #[test]
 fn test_complete_4_5() {
     let mut cmd = Command::cargo_bin("sherby-pace-2024").unwrap();
-    cmd.args(["tiny_test_set/complete_4_5.gr","tiny_test_set/complete_4_5.sol"]);
+    cmd.args(["< tiny_test_set/complete_4_5.gr","> tiny_test_set/complete_4_5.sol"]);
     cmd.assert().success();
 
     let sol1 = Command::new("pace2024verifier")
@@ -32,8 +32,10 @@ fn test_complete_4_5() {
 
 fn test_file(instance: &str, sol1_name: &str, sol2_name: &str) {
     // running our solver. writes solution (order) into sol1.
+    let stdin = "< ".to_owned();
+    let stdout = "> ".to_owned();
     let mut cmd = Command::cargo_bin("sherby-pace-2024").unwrap();
-    cmd.args([instance,sol1_name]);
+    cmd.args([stdin+instance,stdout+sol1_name]);
     cmd.assert().success();
 
     let sol1 = Command::new("pace2024verifier")
@@ -51,8 +53,10 @@ fn test_file(instance: &str, sol1_name: &str, sol2_name: &str) {
 
 fn test_file_no_preprocess(instance: &str, sol1_name: &str, sol2_name: &str) {
     // running our solver. writes solution (order) into sol1.
+    let stdin = "< ".to_owned();
+    let stdout = "> ".to_owned();
     let mut cmd = Command::cargo_bin("no_preprocess").unwrap();
-    cmd.args([instance,sol1_name]);
+    cmd.args([stdin+instance,stdout+sol1_name]);
     cmd.assert().success();
 
     let sol1 = Command::new("pace2024verifier")
