@@ -12,7 +12,6 @@ use std::io::Write;
 use std::io::{self,BufRead};
 use std::process::Command;
 use std::path::Path;
-use std::fs;
 
 
 /// The struct (in other languages: class) used
@@ -966,13 +965,14 @@ pub fn kobayashi_tamaki(
 struct ConstantInfo {
     b: HashMap<usize, usize>,
     a: HashMap<usize, usize>,
-//    inv_a: HashMap<usize, usize>,
+    inv_a: HashMap<usize, usize>,
+    inv_b: HashMap<usize, usize>,
     pos: HashMap<(usize, usize), usize>,
     mt_sizes: Vec<usize>,
     lt_crossings: Vec<Vec<usize>>,
     crossing_dict: HashMap<(usize, usize), usize>,
     m: Vec<Vec<usize>>,
-//    l: HashMap<usize, Vec<usize>>,
+    l: HashMap<usize, Vec<usize>>,
 //    first_b: usize,
 }
 
@@ -982,107 +982,209 @@ struct ConstantInfo {
 /// last element in an optimal ordering of the sub-instance
 /// associated to (t,x), it is enough to only look
 /// at candidates.
-//fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
-//    let mut h = petgraph::graph::Graph::<usize, usize>::new();
-//
-//    // mapping node in h to u balue
-//    let mut map: HashMap<usize, usize> = HashMap::new();
-//    let mut inv_map: HashMap<usize, petgraph::graph::NodeIndex> = HashMap::new();
-//
-//    if constant_info.l[&t].len() > 0 {
-//        // node representing all lt
-//        let nu = h.add_node(usize::MAX);
-//        map.insert(nu.index(), usize::MAX);
-//        inv_map.insert(usize::MAX, nu);
-//    }
-//
-//    // loop over nodes of m[t] to add edges with usize::UMAX (lt nodes)
-//    for p in 0..constant_info.mt_sizes[t] {
-//        // if m[p] not in the set represented by x
-//        if (x >> p) & 1 == 0 {
-//            continue;
-//        }
-//        let u = constant_info.m[t][p];
-//        let nu = h.add_node(u);
-//        map.insert(nu.index(), u);
-//        inv_map.insert(u, nu);
-//
-//        for ul in &constant_info.l[&t] {
-//            if let Some(c) = constant_info.crossing_dict.get(&(u, *ul)) {
-//                let c2 = constant_info.crossing_dict.get(&(*ul, u)).unwrap();
-//                if c < c2 {
-//                    let a = *inv_map.get(&usize::MAX).unwrap();
-//                    let b = *inv_map.get(&u).unwrap();
-//                    if !h.contains_edge(b, a) {
-//                        h.add_edge(b, a, 1);
-//                        break;
-//                    }
-//                }
-//                if c > c2 {
-//                    let a = *inv_map.get(&usize::MAX).unwrap();
-//                    let b = *inv_map.get(&u).unwrap();
-//                    if !h.contains_edge(a, b) {
-//                        h.add_edge(a, b, 1);
-//                        break;
-//                    }
-//                }
-//            }
-//        }
-//        if *constant_info.inv_a.get(&u).unwrap() > constant_info.first_b {
-//            let a = *inv_map.get(&usize::MAX).unwrap();
-//            let b = *inv_map.get(&u).unwrap();
-//            if !h.contains_edge(a, b) {
-//                h.add_edge(a, b, 1);
-//            }
-//        }
-//    }
-//
-//    // adding edges inside m[t]
-//    for p in 0..constant_info.mt_sizes[t] {
-//        if (x >> p) & 1 == 0 {
-//            continue;
-//        }
-//        for p2 in 0..constant_info.mt_sizes[t] {
-//            if (x >> p2) & 1 == 0 {
-//                continue;
-//            }
-//            if p != p2 {
-//                let u = constant_info.m[t][p];
-//                let v = constant_info.m[t][p2];
-//                let a = *inv_map.get(&u).unwrap();
-//                let b = *inv_map.get(&v).unwrap();
-//                let c = constant_info.crossing_dict.get(&(u, v));
-//                let c2 = constant_info.crossing_dict.get(&(v, u));
-//                if c < c2 {
-//                    if !h.contains_edge(a, b) {
-//                        h.add_edge(a, b, 1);
-//                    }
-//                }
-//                if c > c2 {
-//                    if !h.contains_edge(b, a) {
-//                        h.add_edge(b, a, 1);
-//                    }
-//                }
-//            }
-//        }
-//    }
-//
-//    let sccs = tarjan_scc(&h);
-//    // then the last scc in topo order (first in sccs) is last
-//
-//    let mut candidates = 0;
-//
-//    // putting vertices in graph
-//    for u in sccs[0].clone().into_iter() {
-//        let id = map.get(&u.index()).unwrap();
-//        if *id != usize::MAX {
-//            let p = constant_info.pos.get(&(t, *id)).unwrap();
-//            candidates += 1 << p;
-//        }
-//    }
-//
-//    return candidates;
-//}
+fn recomputing_scc_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
+
+    struct TarjanState {
+        index: i32,
+        stack: Vec<usize>,
+        on_stack: Vec<bool>,
+        index_of: Vec<i32>,
+        lowlink_of: Vec<i32>,
+        components: Vec<Vec<usize>>,
+    }
+
+    let p = constant_info.mt_sizes[t];
+    let L = constant_info.l[&t].len();
+
+    let mut state = TarjanState {
+        index: 0,
+        stack: Vec::new(),
+        on_stack: vec![false; p+L],
+        index_of: vec![-1; p+L],
+        lowlink_of: vec![-1; p+L],
+        components: Vec::new(),
+    };
+
+    let mut S: Vec<usize> = Vec::new();
+    for k in 0..p {
+        if (x >> k) & 1 == 1 {
+            S.push(k);
+        }
+    }
+
+    // adjacency
+    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+    for k in &S {
+        adj.entry(*k).or_insert_with(Vec::new);
+    }
+    for k in 0..L {
+        adj.entry(p+k).or_insert_with(Vec::new);
+    }
+
+
+    // with lt aggregate
+    for (l,u) in constant_info.l[&t].iter().enumerate() {
+        for k in &S {
+            let v = constant_info.m[t][*k];
+            if let Some(c) = constant_info.crossing_dict.get(&(v, *u)) {
+                let c2 = constant_info.crossing_dict.get(&(*u, v)).unwrap();
+                if *c2 > *c {
+                    match adj[&k].binary_search(&(l+p)) {
+                        Ok(_) => {}
+                        Err(_) => adj.entry(*k).or_insert_with(Vec::new).push(l+p),
+                    }
+                }
+                else
+                {
+                    match adj[&(l+p)].binary_search(&k) {
+                        Ok(_) => {}
+                        Err(_) => adj.entry(l+p).or_insert_with(Vec::new).push(*k),
+                    }
+
+                }
+            }
+            if constant_info.inv_b[u] < constant_info.inv_a[&v] {
+                match adj[&(l+p)].binary_search(&k) {
+                    Ok(_) => {}
+                    Err(_) => adj.entry(l+p).or_insert_with(Vec::new).push(*k),
+                }
+            }
+        }
+    }
+
+    // within S
+    for k in &S {
+        for l in &S {
+            if k != l {
+                let u = constant_info.m[t][*k];
+                let v = constant_info.m[t][*l];
+                if let Some(c) = constant_info.crossing_dict.get(&(u, v)) {
+                    let c2 = constant_info.crossing_dict.get(&(v,u)).unwrap();
+                    if *c < *c2
+                    {
+                        match adj[&k].binary_search(&l) {
+                            Ok(_) => {}
+                            Err(_) => adj.entry(*k).or_insert_with(Vec::new).push(*l),
+                        }
+                    }
+                    else {
+                        match adj[&l].binary_search(&k) {
+                            Ok(_) => {}
+                            Err(_) => adj.entry(*l).or_insert_with(Vec::new).push(*k),
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn strong_connect(v: usize, adj: &HashMap<usize,Vec<usize>>, state: &mut TarjanState) {
+        state.index_of[v] = state.index;
+        state.lowlink_of[v] = state.index;
+        state.index += 1;
+        state.stack.push(v);
+        state.on_stack[v] = true;
+
+        for &w in &adj[&v] {
+            if state.index_of[w] == -1 {
+                strong_connect(w, adj, state);
+                state.lowlink_of[v] = state.lowlink_of[v].min(state.lowlink_of[w]);
+            } else if state.on_stack[w] {
+                state.lowlink_of[v] = state.lowlink_of[v].min(state.index_of[w]);
+            }
+        }
+
+        if state.lowlink_of[v] == state.index_of[v] {
+            let mut component: Vec<usize> = Vec::new();
+            while let Some(w) = state.stack.pop() {
+                state.on_stack[w] = false;
+                component.push(w);
+                if w == v {
+                    break;
+                }
+            }
+            state.components.push(component);
+        }
+    }
+
+    for v in S {
+        if state.index_of[v] == -1 {
+            strong_connect(v, &adj, &mut state);
+        }
+    }
+    for v in 0..constant_info.l[&t].len() {
+        if state.index_of[p+v] == -1 {
+            strong_connect(p+v, &adj, &mut state);
+        }
+    }
+    
+    let mut candidates = 0;
+    println!("{:?}",state.components[0]);
+    for k in state.components[0].clone().into_iter() {
+        if k < p {
+            candidates += 1 << k;
+        }
+    }
+
+    return candidates;
+}
+
+fn triangle_rule(t: usize, x: usize, constant_info: &ConstantInfo) -> usize {
+
+    let p = constant_info.mt_sizes[t];
+    let mut candidates = x;
+    
+    let mut S: Vec<usize> = Vec::new();
+    for k in 0..p {
+        if (x >> k) & 1 == 1 {
+            S.push(k);
+        }
+    }
+
+    let mut edge_list: Vec<(usize,usize)> = Vec::new();
+    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+    for k in &S {
+        adj.entry(*k).or_insert_with(Vec::new);
+    }
+    let mut weight: HashMap<(usize,usize), usize> = HashMap::new();
+    // within S
+    for k in &S {
+        for l in &S {
+            if k != l {
+                let u = constant_info.m[t][*k];
+                let v = constant_info.m[t][*l];
+                if let Some(c) = constant_info.crossing_dict.get(&(u, v)) {
+                    edge_list.push((*k,*l));
+                    match adj[&k].binary_search(&l) {
+                        Ok(_) => {}
+                        Err(_) => adj.entry(*k).or_insert_with(Vec::new).push(*l),
+                    }
+                    weight.insert((*k,*l),*c);
+                }
+            }
+        }
+    }
+    println!("adj {:?}", adj);
+
+    for (k,l) in edge_list {
+        let mut vec_x: Vec<usize> = Vec::new();
+        for x in &adj[&l] {
+            match adj[&x].binary_search(&k) {
+                Ok(_) => vec_x.push(*x),
+                Err(_) => {},
+            }
+        }
+        let mut sum = 0;
+        for x in vec_x {
+            sum += std::cmp::min(weight[&(x,k)],weight[&(l,x)]);
+        }
+        println!("sum weight {:?} {:?}", sum,weight[&(k,l)]);
+        if sum > weight[&(k,l)] {
+            candidates = turn_pth_bit_off(candidates, l);
+        }
+    }
+    return candidates;
+}
 
 /// bit manipulation setting the p-th bit of x to 0.
 fn turn_pth_bit_off(x: usize, p: usize) -> usize {
@@ -1143,10 +1245,29 @@ fn opt_num_crossings(
             let opt = opt_num_crossings(t - 1, new_x, dp_table, ptr, constant_info);
             dp_table.insert((t, x), opt);
         } else {
-//            // RECOMPUTING SCC RULE
-//            let candidates = recomputing_scc_rule(t, x, constant_info);
-//            // END RECOMPUTING SCC RULE
+//          
             let candidates = x;
+            let mut hamming_weight = 0;
+            for p in 0..constant_info.mt_sizes[t] {
+                // if m[p] not in the set represented by x
+                if (x >> p) & 1 == 0 {
+                    continue;
+                }
+                hamming_weight += 1;
+            }
+//            // RECOMPUTING SCC RULE
+            if hamming_weight > 15 {
+//                println!("CALLING RECOMPUTE");
+
+                let candidates = recomputing_scc_rule(t, x, constant_info);
+
+//                println!("CALLING TRIANGLE");
+//                let candidates = triangle_rule(t,candidates,constant_info);
+//                if candidates != x {
+//                    println!("reduced! {:?} {:?}", candidates, x);
+//                }
+            }
+//            // END RECOMPUTING SCC RULE
 
             let mut best_sc = usize::MAX;
             let mut best_x = usize::MAX;
@@ -1310,10 +1431,12 @@ pub fn recursive_kt(
     let mut a: HashMap<usize, usize> = HashMap::new(); // t to y such that t=a_y
     let mut inv_a: HashMap<usize, usize> = HashMap::new(); // y to t such that t=a_y
     let mut b: HashMap<usize, usize> = HashMap::new(); // t to y such that t=b_y
+    let mut inv_b: HashMap<usize, usize> = HashMap::new(); // y to t such that t=b_y
     for tup in &ints {
         a.insert(tup.1, tup.0);
         inv_a.insert(tup.0, tup.1);
         b.insert(tup.2, tup.0);
+        inv_b.insert(tup.0, tup.2);
         for t in (tup.1)..(tup.2) {
             // or_default puts an empty vector if t entry does not exist.
             match m[t].binary_search(&tup.0) {
@@ -1363,13 +1486,14 @@ pub fn recursive_kt(
     let constant_info = ConstantInfo {
         b: b,
         a: a,
-//        inv_a: inv_a,
+        inv_a: inv_a,
+        inv_b: inv_b,
         pos: pos,
         mt_sizes: mt_sizes,
         lt_crossings: lt_crossings,
         crossing_dict: crossing_dict.clone(),
         m: m,
-//        l: l,
+        l: l,
 //        first_b: first_b,
     };
 
