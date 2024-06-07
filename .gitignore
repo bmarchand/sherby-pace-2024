@@ -1,4 +1,5 @@
 target/
+sherby-exact
 .old/
 cmake_install.cmake
 Makefile

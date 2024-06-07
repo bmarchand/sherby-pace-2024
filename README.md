@@ -1,6 +1,6 @@
 Submission for PACE 2024: https://pacechallenge.org/2024/ from the University of Sherbrooke.
 
-To build the solvers:
+**Building the solvers**:
 ```
 cmake .
 make
@@ -15,18 +15,15 @@ Another binary (src/bin/sherby-cutwidth-hybrid.rs) was submitted to the exact tr
 Both first look at the cutwidth of the instance. If it is low enough, the cutwidth-based
 solver is called. Otherwise, the SAT solver is called.
 
-After compilation,running the code on an example can be done with:
+**Using the solvers:**
 
-```
-cargo run -- < tests/tiny_test_set/cycle_8_shuffled.gr
-```
 or 
 ```
-./target/release/sherby-pace-2024 < tests/tiny_test_set/cycle_8_shuffled.gr
+sherby-exact < exact-public-instances/1.gr
 ```
 for the exact track, and
 ```
-./target/release/sherby-cutwidth-hybrid < tests/tiny_test_set/cycle_8_shuffled.gr
+sherby-cutwidth < cutwidth-public/1.gr
 ```
 for the parameterized (cutwidth) track.
 
