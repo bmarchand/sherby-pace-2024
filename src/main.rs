@@ -38,21 +38,16 @@ fn main() {
     let mut cptscc = 0;
     for scc in &sccs {
         let instance_size = total_instance_size(&scc);
-//        println!("instance size {:?}",instance_size);
         
 	if instance_size > 10000000 && scc.bnodes.len() > 1{
-	//if args.dfas && scc.bnodes.len() > 1{
-//                println!("calling SAT solver");
-		info!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
-		let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict);
-		vec.extend_from_slice(&vec_scc);
+	    info!("Solving scc #{}, size={}", cptscc, scc.bnodes.len());
+	    let (_cost, vec_scc) = solve_dfas( &scc, &crossing_dict);
+	    vec.extend_from_slice(&vec_scc);
 	}
-	else{
-		let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
-		//let vec_scc = recursive_kt(&scc, &crossing_dict).unwrap();
-		vec.extend_from_slice(&vec_scc);
+	else {
+	    let vec_scc = kobayashi_tamaki(&scc, &crossing_dict).unwrap();
+	    vec.extend_from_slice(&vec_scc);
 	}
-	
 	cptscc += 1;
     }
 
@@ -60,13 +55,11 @@ fn main() {
     let vec = add_twins(vec, &twin_mapping);
     // end twin post-processing
 
-    // Writing result in output file (name same as input, extension changed)
-//    let outname = args.solution.into_inner().clone();
+    // Writing result 
     let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
     for x in v {
         println!("{}",x);
     }
-//    let _ = std::fs::write(outname, v.join("\n"));
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
     info!("peak memory: {} mb", peak_mem);
