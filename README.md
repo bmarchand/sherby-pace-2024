@@ -16,8 +16,6 @@ Both first look at the cutwidth of the instance. If it is low enough, the cutwid
 solver is called. Otherwise, the SAT solver is called.
 
 **Using the solvers:**
-
-or 
 ```
 sherby-exact < exact-public-instances/1.gr
 ```
