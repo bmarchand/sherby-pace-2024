@@ -1,0 +1,29 @@
+use log::info;
+use peak_alloc::PeakAlloc;
+use sherby_pace_2024::*;
+
+#[global_allocator]
+static PEAK_ALLOC: PeakAlloc = PeakAlloc;
+
+fn main() {
+
+    let graph: Graph = parse_graph();
+
+    let crossing_dict = orientable_crossing_values(&graph);
+
+    // final solution init
+    let mut vec: Vec<usize> = Vec::new();
+    let (_cost, vec_scc) = solve_dfas( &graph, &crossing_dict);
+    vec.extend_from_slice(&vec_scc);
+
+    // Writing result in output file (name same as input, extension changed)
+//    let outname = args.solution.into_inner().clone();
+    let v: Vec<String> = vec.into_iter().map(|x| x.to_string()).collect();
+    for x in v {
+        println!("{}",x);
+    }
+//    let _ = std::fs::write(outname, v.join("\n"));
+
+    let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
+    info!("peak memory: {} mb", peak_mem);
+}
