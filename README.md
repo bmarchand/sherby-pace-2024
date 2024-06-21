@@ -1,4 +1,4 @@
-Submission for PACE 2024: https://pacechallenge.org/2024/ from the University of Sherbrooke.
+Submission for PACE 2024: https://pacechallenge.org/2024/ from the University of Sherbrooke. Solver description: [here](sherby_solver_description_pace_2024.pdf)
 
 **Building the solvers**:
 ```
